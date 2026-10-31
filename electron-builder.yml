@@ -1,0 +1,62 @@
+appId: com.ruodao.office.desktop
+productName: 若道办公
+copyright: Copyright © 2026 Ruodao
+directories:
+  output: release-win
+  buildResources: build
+files:
+  - dist/**/*
+  - electron/**/*
+  - build/icon.ico
+  - package.json
+asar: true
+compression: normal
+fileAssociations:
+  - ext: docx
+    name: Word 文档
+    description: 若道办公 Word 文档
+    role: Editor
+  - ext: xlsx
+    name: Excel 工作簿
+    description: 若道办公 Excel 工作簿
+    role: Editor
+  - ext: xls
+    name: Excel 97-2003 工作簿
+    description: 若道办公 Excel 工作簿
+    role: Editor
+  - ext: csv
+    name: CSV 表格
+    description: 若道办公 CSV 表格
+    role: Editor
+  - ext: pdf
+    name: PDF 文档
+    description: 若道办公 PDF 文档
+    role: Viewer
+  - ext: md
+    name: Markdown 文档
+    description: 若道办公 Markdown 文档
+    role: Editor
+win:
+  executableName: RuodaoOffice
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+nsis:
+  artifactName: RuodaoOffice-${version}-Setup.${ext}
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: 若道办公
+  installerLanguages:
+    - zh_CN
+  language: "2052"
+  deleteAppDataOnUninstall: false
+portable:
+  artifactName: RuodaoOffice-${version}-Portable.${ext}

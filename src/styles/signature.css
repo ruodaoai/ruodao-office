@@ -1,0 +1,667 @@
+/* ---------- PDF signature, notes & compression ---------- */
+
+.pdf-sign-cta {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(200, 68, 43, 0.18);
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fffdf8, #fbf3e8);
+}
+
+.pdf-sign-badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fffaf4;
+  box-shadow: 0 4px 10px rgba(200, 68, 43, 0.22);
+}
+
+.pdf-sign-cta strong {
+  display: block;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pdf-sign-cta p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.pdf-note-input {
+  min-height: 66px;
+  font-size: 11.5px;
+  line-height: 1.7;
+  background: var(--surface-2);
+}
+
+.pdf-note-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pdf-note-tones {
+  display: flex;
+  gap: 6px;
+}
+
+.pdf-note-place {
+  width: 104px;
+  height: 30px;
+  margin-left: auto;
+  font-size: 11.5px;
+}
+
+.pdf-note-preview {
+  padding: 8px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  background: #fbfaf6;
+}
+
+.pdf-note-preview img {
+  display: block;
+  width: 100%;
+  border-radius: 2px;
+  box-shadow: 0 3px 10px rgba(38, 32, 22, 0.08);
+}
+
+.pdf-preset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pdf-preset {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  text-align: left;
+  transition: border-color 0.15s var(--ease), background 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+
+.pdf-preset:hover {
+  border-color: var(--line-strong);
+  background: var(--surface);
+}
+
+.pdf-preset.active {
+  border-color: rgba(200, 68, 43, 0.42);
+  background: var(--accent-softer);
+  box-shadow: inset 0 0 0 1px rgba(200, 68, 43, 0.12);
+}
+
+.pdf-preset-dot {
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--line-strong);
+  border-radius: 50%;
+}
+
+.pdf-preset.active .pdf-preset-dot {
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: 0 0 0 3px rgba(200, 68, 43, 0.12);
+}
+
+.pdf-preset-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.pdf-preset-body strong {
+  color: var(--ink);
+  font-size: 11.5px;
+  font-weight: 650;
+}
+
+.pdf-preset-body small {
+  color: var(--faint);
+  font-size: 10px;
+}
+
+.pdf-preset em {
+  color: var(--muted);
+  font-size: 10px;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+}
+
+.pdf-compress-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.pdf-compress-result {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid rgba(200, 68, 43, 0.2);
+  border-radius: 9px;
+  background: #fffdf8;
+}
+
+.pdf-compress-sizes {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.pdf-compress-sizes > span:not(.pdf-compress-arrow) {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.pdf-compress-sizes small {
+  color: var(--faint);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+}
+
+.pdf-compress-sizes strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pdf-compress-arrow {
+  color: var(--faint);
+}
+
+.pdf-compress-sizes em {
+  margin-left: auto;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.pdf-compress-sizes .is-down {
+  color: #2f6b4f;
+}
+
+.pdf-compress-sizes .is-up {
+  color: var(--accent);
+}
+
+.pdf-compress-meta {
+  color: var(--faint);
+  font-size: 10px;
+}
+
+.pdf-compress-warning {
+  margin: 0;
+  padding: 7px 9px;
+  border-radius: 6px;
+  background: #fbf3e8;
+  color: #8a5a2b;
+  font-size: 10.5px;
+  line-height: 1.6;
+}
+
+.signature-studio-modal .modal-body {
+  padding: 18px 20px;
+}
+
+.signature-studio {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.9fr);
+  align-items: start;
+  gap: 22px;
+}
+
+.signature-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.signature-modes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface-2);
+}
+
+.signature-mode {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 32px;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+
+.signature-mode:hover {
+  color: var(--ink);
+}
+
+.signature-mode.active {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: 0 1px 3px rgba(38, 32, 22, 0.09);
+}
+
+.signature-canvas-area {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.signature-pad-shell {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background-color: #fffdf8;
+  background-image: radial-gradient(rgba(38, 32, 22, 0.045) 1px, transparent 1px);
+  background-size: 14px 14px;
+  transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+
+.signature-pad-shell.is-signed {
+  border-color: rgba(200, 68, 43, 0.34);
+  box-shadow: 0 0 0 3px rgba(200, 68, 43, 0.06);
+}
+
+.signature-pad {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 1;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.signature-pad-hint {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--faint);
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+
+.signature-pad-line {
+  position: absolute;
+  right: 8%;
+  bottom: 24%;
+  left: 8%;
+  border-bottom: 1px dashed rgba(38, 32, 22, 0.18);
+  pointer-events: none;
+}
+
+.signature-stage-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.signature-inks {
+  display: flex;
+  gap: 7px;
+}
+
+.signature-ink {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--line-strong);
+  transition: transform 0.12s var(--ease), box-shadow 0.12s var(--ease);
+}
+
+.signature-ink:hover {
+  transform: scale(1.08);
+}
+
+.signature-ink.active {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.signature-stage-bar .btn {
+  margin-left: auto;
+}
+
+.signature-preview {
+  display: grid;
+  place-items: center;
+  min-height: 196px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fffdf8;
+}
+
+.signature-preview img {
+  display: block;
+  max-width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+}
+
+.signature-preview-type img {
+  width: 100%;
+}
+
+.signature-preview-seal img {
+  width: 190px;
+}
+
+.signature-type-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px;
+  gap: 8px;
+}
+
+.signature-seal-fields {
+  grid-template-columns: 1fr;
+}
+
+.signature-seal-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 7px;
+}
+
+.signature-upload-area {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.signature-upload-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 196px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 10px;
+  background: #fffdf8;
+  color: var(--muted);
+  transition: border-color 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.signature-upload-empty:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.signature-upload-empty strong {
+  font-size: 12.5px;
+}
+
+.signature-upload-empty span {
+  color: var(--faint);
+  font-size: 10.5px;
+}
+
+.signature-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.signature-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.signature-control-title {
+  color: var(--ink);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.signature-control-group .hint {
+  margin: 0;
+}
+
+.signature-place-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.signature-place {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 10.5px;
+  transition: border-color 0.15s var(--ease), background 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.signature-place:hover {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.signature-place.active {
+  border-color: rgba(200, 68, 43, 0.4);
+  background: var(--accent-softer);
+  color: var(--accent-ink);
+}
+
+.signature-place-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--line-strong);
+}
+
+.signature-place.active .signature-place-dot {
+  background: var(--accent);
+}
+
+.signature-stage-preview {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-top: 4px;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #fffdf8, #fbf8f1);
+}
+
+.signature-stage-preview .signature-mini-page {
+  flex: none;
+  width: 132px;
+  margin: 0;
+}
+
+.signature-stage-preview-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.signature-stage-preview-body p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.signature-stage-preview-body small {
+  margin-top: 3px;
+  color: var(--faint);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.signature-mini-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 7%;
+  width: 172px;
+  max-width: 100%;
+  margin: 0 auto;
+  aspect-ratio: 210 / 297;
+  padding: 11% 10%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffdf8;
+  overflow: hidden;
+}
+
+.signature-mini-head {
+  display: block;
+  width: 52%;
+  height: 3px;
+  margin-bottom: 2%;
+  border-radius: 2px;
+  background: rgba(38, 32, 22, 0.48);
+}
+
+.signature-mini-line {
+  display: block;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(38, 32, 22, 0.12);
+}
+
+.signature-mini-line.short {
+  width: 74%;
+}
+
+.signature-mini-stamp {
+  position: absolute;
+  display: block;
+  min-width: 12%;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.signature-mini-stamp.at-bottom-right {
+  right: 8%;
+  bottom: 8%;
+}
+
+.signature-mini-stamp.at-bottom-left {
+  bottom: 8%;
+  left: 8%;
+}
+
+.signature-mini-stamp.at-bottom-center {
+  bottom: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.signature-mini-stamp.at-top-right {
+  top: 8%;
+  right: 8%;
+}
+
+.signature-mini-stamp.at-top-left {
+  top: 8%;
+  left: 8%;
+}
+
+.signature-mini-stamp.at-center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.signature-mini-scribble {
+  position: absolute;
+  inset: 14% 12% 30%;
+  border-bottom: 2px solid #211f1c;
+  border-radius: 40% 55% 45% 50%;
+  transform: rotate(-7deg);
+  opacity: 0.72;
+}
+
+.signature-target {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.signature-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.signature-foot-note {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--faint);
+  font-size: 10.5px;
+}
+
+.signature-foot-actions {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 860px) {
+  .signature-studio {
+    grid-template-columns: 1fr;
+  }
+
+  .signature-preview {
+    min-height: 160px;
+  }
+
+  .signature-foot-note {
+    display: none;
+  }
+}

@@ -1,0 +1,34 @@
+# 依赖
+node_modules/
+
+# 构建产物
+dist/
+release/
+release-build/
+release-win/
+
+# 本地环境变量
+.env
+.env.*
+!.env.example
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+
+# 工具缓存
+.vite/
+.cache/
+.workbuddy/
+
+# 内部 QA 产物（截图与临时脚本，不进仓库）
+.qa/
+
+# 临时文件
+*.tmp
+*.bak
+runtime-patch.exe

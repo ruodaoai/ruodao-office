@@ -1,0 +1,15 @@
+import ReactDOM from 'react-dom/client'
+import App from './App'
+import './styles/base.css'
+import './styles/shell.css'
+import './styles/settings.css'
+import './styles/docs.css'
+import './styles/sheets.css'
+import './styles/pdf.css'
+import './styles/signature.css'
+import './styles/convert.css'
+import './styles/notes.css'
+import './styles/collab.css'
+import './styles/ai.css'
+
+ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(<App />)
