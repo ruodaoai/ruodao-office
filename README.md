@@ -10,11 +10,11 @@
 
 [![Version](https://img.shields.io/badge/version-0.1.0-c8442b)](https://github.com/ruodaoai/ruodao-office/releases)
 [![License](https://img.shields.io/badge/license-MIT-c8442b)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011-c8442b)](#-下载与安装)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011-c8442b)](#下载与安装)
 [![Electron](https://img.shields.io/badge/Electron-45-c8442b)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18%20%2B%20TypeScript-c8442b)](https://react.dev/)
 
-[⬇️ 下载安装包](https://github.com/ruodaoai/ruodao-office/releases/latest) · [快速开始](#-快速开始) · [使用教程](#-使用教程) · [常见问题](#-常见问题)
+[⬇️ 下载安装包](https://github.com/ruodaoai/ruodao-office/releases/latest) · [功能一览](#功能一览) · [界面速览](#界面速览) · [使用教程](#使用教程) · [常见问题](#常见问题)
 
 </div>
 
@@ -307,6 +307,8 @@ ruodao-office/
 ## 许可证
 
 [MIT](LICENSE) © 2026 Ruodao（若道）
+
+各版本改动见 [CHANGELOG](CHANGELOG.md)。
 
 <div align="center">
 <sub>把文件，留在自己手里。</sub>

@@ -20,6 +20,25 @@ function blankTab(name = '工作表 1'): SheetTab {
   return { id: uid(), name, cells: {}, rows: DEFAULT_ROWS, cols: DEFAULT_COLS, colWidths: {} }
 }
 
+const LEGACY_WELCOME_ROW = '<tr><td>买断而非订阅</td><td>一次授权，永久使用全部本地功能</td></tr>'
+const WELCOME_ROW = '<tr><td>开源免费</td><td>全部功能开放，不收订阅费或授权费</td></tr>'
+const LEGACY_PRINCIPLE = '## 二、买断，而不是租用\n一次付费，永久使用。不需要为了导出 PDF 再买一次会员。'
+const PRINCIPLE = '## 二、开源免费\n若道办公以开源方式发布，全部功能免费使用。没有订阅、授权码，也不会为了导出 PDF 再收一次费。'
+
+function dropLegacyPricing(snapshot: LibrarySnapshot): LibrarySnapshot {
+  const docs = snapshot.docs.map((doc) =>
+    doc.html.includes(LEGACY_WELCOME_ROW)
+      ? { ...doc, html: doc.html.split(LEGACY_WELCOME_ROW).join(WELCOME_ROW) }
+      : doc,
+  )
+  const notes = snapshot.notes.map((note) =>
+    note.content.includes(LEGACY_PRINCIPLE)
+      ? { ...note, content: note.content.split(LEGACY_PRINCIPLE).join(PRINCIPLE) }
+      : note,
+  )
+  return { ...snapshot, docs, notes }
+}
+
 interface LibraryState extends LibrarySnapshot {
   hydrated: boolean
   hydrate: () => Promise<void>
@@ -56,7 +75,7 @@ export const useLibrary = create<LibraryState>((set, get) => ({
   hydrate: async () => {
     if (get().hydrated) return
     const saved = await loadLibrary()
-    const snapshot = saved ?? createSeedSnapshot()
+    const snapshot = saved ? dropLegacyPricing(saved) : createSeedSnapshot()
     set({ ...snapshot, hydrated: true })
   },
 
@@ -155,7 +174,7 @@ export const useLibrary = create<LibraryState>((set, get) => ({
   },
 
   replaceAll: (snapshot) => {
-    set({ ...snapshot, hydrated: true })
+    set({ ...dropLegacyPricing(snapshot), hydrated: true })
   },
 
   clearAll: () => {
