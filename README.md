@@ -8,7 +8,7 @@
 
 文件不出本机，功能不设围墙，AI 由你指定。
 
-[![Version](https://img.shields.io/badge/version-0.1.0-c8442b)](https://github.com/ruodaoai/ruodao-office/releases)
+[![Release](https://img.shields.io/github/v/release/ruodaoai/ruodao-office?color=c8442b&label=release)](https://github.com/ruodaoai/ruodao-office/releases)
 [![License](https://img.shields.io/badge/license-MIT-c8442b)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011-c8442b)](#下载与安装)
 [![Electron](https://img.shields.io/badge/Electron-45-c8442b)](https://www.electronjs.org/)
@@ -102,7 +102,7 @@
 
 ### 方式一：安装版（推荐）
 
-前往 [Releases](https://github.com/ruodaoai/ruodao-office/releases/latest) 下载 `RuodaoOffice-0.1.0-Setup.exe`：
+**[⬇ 下载 RuodaoOffice-0.1.0-Setup.exe](https://github.com/ruodaoai/ruodao-office/releases/download/v0.1.0/RuodaoOffice-0.1.0-Setup.exe)**（约 125 MB · [全部版本](https://github.com/ruodaoai/ruodao-office/releases)）
 
 1. 双击安装包，按向导选择安装目录（默认 `%LOCALAPPDATA%\Programs\若道办公`）；
 2. 安装过程会创建桌面快捷方式与开始菜单项；
@@ -110,7 +110,9 @@
 
 ### 方式二：免安装版
 
-下载 `RuodaoOffice-0.1.0-Portable.exe`，放到任意目录双击即可运行，不写注册表、不建快捷方式，适合放 U 盘或临时试用。
+**[⬇ 下载 RuodaoOffice-0.1.0-Portable.exe](https://github.com/ruodaoai/ruodao-office/releases/download/v0.1.0/RuodaoOffice-0.1.0-Portable.exe)**（约 114 MB）
+
+放到任意目录双击即可运行，不写注册表、不建快捷方式，适合放 U 盘或临时试用。
 
 > 两个包的功能完全一致。区别只在于：安装版会注册开始菜单与卸载项，绿色版随文件走。
 
