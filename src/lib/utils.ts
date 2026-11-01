@@ -1,3 +1,5 @@
+import { isEnglish, t } from '../i18n'
+
 export function uid(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID()
   return `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`
@@ -54,12 +56,12 @@ export function countText(text: string): { chars: number; words: number } {
 
 export function timeAgo(ts: number): string {
   const diff = Date.now() - ts
-  if (diff < 60_000) return '刚刚'
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分钟前`
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} 小时前`
-  if (diff < 7 * 86_400_000) return `${Math.floor(diff / 86_400_000)} 天前`
+  if (diff < 60_000) return t('刚刚')
+  if (diff < 3_600_000) return t('{count} 分钟前', { count: Math.floor(diff / 60_000) })
+  if (diff < 86_400_000) return t('{count} 小时前', { count: Math.floor(diff / 3_600_000) })
+  if (diff < 7 * 86_400_000) return t('{count} 天前', { count: Math.floor(diff / 86_400_000) })
   const d = new Date(ts)
-  return `${d.getMonth() + 1}月${d.getDate()}日`
+  return t('{month} 月 {day} 日', { month: d.getMonth() + 1, day: d.getDate() })
 }
 
 export function formatDateTime(ts: number): string {
@@ -70,12 +72,20 @@ export function formatDateTime(ts: number): string {
 
 export function todayLabel(): string {
   const d = new Date()
+  if (isEnglish()) {
+    return new Intl.DateTimeFormat('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }).format(d)
+  }
   const week = ['日', '一', '二', '三', '四', '五', '六'][d.getDay()]
   return `${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日 · 星期${week}`
 }
 
 export function safeFilename(name: string, ext: string): string {
-  const base = name.replace(/[\\/:*?"<>|]+/g, '_').replace(/\s+/g, ' ').trim() || '未命名'
+  const base = name.replace(/[\\/:*?"<>|]+/g, '_').replace(/\s+/g, ' ').trim() || t('未命名')
   return `${base}.${ext.replace(/^\./, '')}`
 }
 
@@ -221,14 +231,14 @@ export function loadImageElement(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image()
     image.onload = () => resolve(image)
-    image.onerror = () => reject(new Error('图片加载失败'))
+    image.onerror = () => reject(new Error(t('图片加载失败')))
     image.src = src
   })
 }
 
 export async function compressImageFile(file: File, maxWidth = 1600): Promise<{ dataUrl: string; width: number; height: number }> {
-  if (!file.type.startsWith('image/')) throw new Error('请选择图片文件')
-  if (file.size > 12 * 1024 * 1024) throw new Error('图片不能超过 12MB')
+  if (!file.type.startsWith('image/')) throw new Error(t('请选择图片文件'))
+  if (file.size > 12 * 1024 * 1024) throw new Error(t('图片不能超过 12MB'))
   const source = await readFileAsDataUrl(file)
   const image = await loadImageElement(source)
   const scale = Math.min(1, maxWidth / image.width)
@@ -239,7 +249,7 @@ export async function compressImageFile(file: File, maxWidth = 1600): Promise<{ 
   canvas.width = Math.max(1, Math.round(image.width * scale))
   canvas.height = Math.max(1, Math.round(image.height * scale))
   const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('无法处理图片')
+  if (!ctx) throw new Error(t('无法处理图片'))
   ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
   const png = file.type === 'image/png' || file.type === 'image/svg+xml'
   const dataUrl = canvas.toDataURL(png ? 'image/png' : 'image/jpeg', 0.86)

@@ -13,6 +13,7 @@ import {
   BorderStyle,
   type IRunOptions,
 } from 'docx'
+import { t } from '../i18n'
 
 interface RunFormat {
   bold?: boolean
@@ -319,7 +320,7 @@ export async function exportToDocx(html: string, title: string): Promise<{ blob:
 
   const document = new Document({
     title,
-    creator: '若道办公',
+    creator: t('若道办公'),
     styles: {
       default: {
         document: {

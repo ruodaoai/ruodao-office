@@ -20,6 +20,7 @@ import { AiTaskDialog } from './modules/ai/AiTaskDialog'
 import { useAuth } from './store/auth'
 import { useLibrary } from './store/library'
 import { useUI } from './store/ui'
+import { useLocale, useT } from './i18n'
 import type { ModuleId } from './types'
 
 const MODULES: Array<{ id: ModuleId; render: () => JSX.Element }> = [
@@ -32,6 +33,8 @@ const MODULES: Array<{ id: ModuleId; render: () => JSX.Element }> = [
 ]
 
 export default function App() {
+  const t = useT()
+  const locale = useLocale((s) => s.locale)
   const hydrated = useLibrary((s) => s.hydrated)
   const hydrate = useLibrary((s) => s.hydrate)
   const hydrateAuth = useAuth((s) => s.hydrate)
@@ -47,6 +50,14 @@ export default function App() {
   const [dropActive, setDropActive] = useState(false)
   const skipFirstSave = useRef(true)
   const dropDepth = useRef(0)
+
+  useEffect(() => {
+    const english = locale === 'en'
+    document.documentElement.lang = english ? 'en' : 'zh-CN'
+    document.title = english
+      ? 'Ruodao Office · Local-first office suite'
+      : '若道办公 · 本地优先的 AI 办公套件'
+  }, [locale])
 
   useEffect(() => {
     void hydrate()
@@ -180,7 +191,7 @@ export default function App() {
       if (key === 's') {
         event.preventDefault()
         void flushLibrary().then(() => {
-          toast('已保存到本机', 'success')
+          toast(t('已保存到本机'), 'success')
         })
       }
     }
@@ -195,7 +206,7 @@ export default function App() {
           <span className="boot-mark">
             <Logo size={50} />
           </span>
-          <span className="boot-text">正在打开本地工作区…</span>
+          <span className="boot-text">{t('正在打开本地工作区…')}</span>
         </div>
       </div>
     )

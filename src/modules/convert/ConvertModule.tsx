@@ -48,6 +48,7 @@ import {
 } from '../../lib/convert/formats'
 import { cn, downloadBlob, uid } from '../../lib/utils'
 import { useUI } from '../../store/ui'
+import { t, useT } from '../../i18n'
 
 interface QueueItem {
   id: string
@@ -110,10 +111,11 @@ function resultIcon(ext: string) {
 }
 
 function targetLabelFor(kind: ConvertKind): string {
-  return KIND_LABEL[kind]
+  return t(KIND_LABEL[kind])
 }
 
 export function ConvertModule() {
+  const t = useT()
   const toast = useUI((s) => s.toast)
   const inputRef = useRef<HTMLInputElement>(null)
   const [queue, setQueue] = useState<QueueItem[]>([])
@@ -194,13 +196,15 @@ export function ConvertModule() {
         }
         return defaultTargetFor(Array.from(new Set(all.map((item) => item.kind))))
       })
-      toast(`已加入 ${accepted.length} 个文件`, 'success')
+      toast(t('已加入 {n} 个文件', { n: accepted.length }), 'success')
     }
     if (unsupported.length) {
-      toast(`暂不支持：${unsupported.slice(0, 2).join('、')}${unsupported.length > 2 ? ` 等 ${unsupported.length} 个文件` : ''}`, 'error')
+      const names = unsupported.slice(0, 2).join(t('、'))
+      const more = unsupported.length > 2 ? t(' 等 {n} 个文件', { n: unsupported.length }) : ''
+      toast(`${t('暂不支持：{names}', { names })}${more}`, 'error')
     }
     if (duplicates.length) {
-      toast(`${duplicates.length} 个文件已在队列中`, 'info')
+      toast(t('{n} 个文件已在队列中', { n: duplicates.length }), 'info')
     }
   }
 
@@ -319,15 +323,15 @@ export function ConvertModule() {
       setResults(flat)
       if (flat.length === 1) {
         downloadBlob(flat[0].blob, flat[0].name)
-        toast(`已生成 ${flat[0].name}，保存到下载目录`, 'success')
+        toast(t('已生成 {name}，保存到下载目录', { name: flat[0].name }), 'success')
       } else if (flat.length > 1) {
-        toast(`转换完成，生成 ${flat.length} 个文件`, 'success')
+        toast(t('转换完成，生成 {n} 个文件', { n: flat.length }), 'success')
       } else {
         const errors = batch.filter((item) => item.error).length
-        toast(errors ? '转换没有完成，请查看队列中的提示' : '没有生成任何结果', 'error')
+        toast(errors ? t('转换没有完成，请查看队列中的提示') : t('没有生成任何结果'), 'error')
       }
     } catch (error) {
-      toast(error instanceof Error ? error.message : '转换失败', 'error')
+      toast(error instanceof Error ? error.message : t('转换失败'), 'error')
     } finally {
       setBusy(false)
     }
@@ -349,10 +353,10 @@ export function ConvertModule() {
       const zip = new JSZip()
       results.forEach((item) => zip.file(item.name, item.blob))
       const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } })
-      downloadBlob(blob, `若道转换结果-${stamp()}.zip`)
-      toast(`已打包 ${results.length} 个结果`, 'success')
+      downloadBlob(blob, t('若道转换结果-{stamp}.zip', { stamp: stamp() }))
+      toast(t('已打包 {n} 个结果', { n: results.length }), 'success')
     } catch (error) {
-      toast(error instanceof Error ? error.message : '打包失败', 'error')
+      toast(error instanceof Error ? error.message : t('打包失败'), 'error')
     } finally {
       setDownloading(false)
     }
@@ -364,10 +368,10 @@ export function ConvertModule() {
     setPackProgress(0)
     try {
       const blob = await packArchive(queue.map((item) => item.file), (ratio) => setPackProgress(Math.round(ratio * 100)))
-      downloadBlob(blob, `若道文件包-${stamp()}.zip`)
-      toast(`已打包 ${queue.length} 个文件`, 'success')
+      downloadBlob(blob, t('若道文件包-{stamp}.zip', { stamp: stamp() }))
+      toast(t('已打包 {n} 个文件', { n: queue.length }), 'success')
     } catch (error) {
-      toast(error instanceof Error ? error.message : '打包失败', 'error')
+      toast(error instanceof Error ? error.message : t('打包失败'), 'error')
     } finally {
       setPacking(false)
     }
@@ -388,50 +392,51 @@ export function ConvertModule() {
         <header className="convert-hero">
           <div className="convert-eyebrow">
             <RefreshCw size={12} />
-            Convert · 本地转换中心
+            {t('Convert · 本地转换中心')}
           </div>
           <h1>
-            换一种格式，
-            <em>不必上传。</em>
+            {t('换一种格式，')}
+            <em>{t('不必上传。')}</em>
           </h1>
           <p>
-            把文件拖进队列，批量换格式。图片、PDF、Word、表格、Markdown 与压缩包都在本机处理，
-            没有服务器，没有账号，也没有等待上传的进度条。
+            {t(
+              '把文件拖进队列，批量换格式。图片、PDF、Word、表格、Markdown 与压缩包都在本机处理，没有服务器，没有账号，也没有等待上传的进度条。',
+            )}
           </p>
           <div className="convert-facts">
             <span>
-              <b>20</b> 种输入
+              <b>20</b> {t('种输入')}
             </span>
             <span>
-              <b>{TARGETS.length}</b> 种输出
+              <b>{TARGETS.length}</b> {t('种输出')}
             </span>
             <span>
-              <b>0</b> 次上传
+              <b>0</b> {t('次上传')}
             </span>
             <span className="convert-facts-local">
               <ShieldCheck size={13} />
-              全部在本机完成
+              {t('全部在本机完成')}
             </span>
           </div>
         </header>
 
         <div className="convert-grid">
-          <section className="convert-panel convert-queue" aria-label="文件队列">
+          <section className="convert-panel convert-queue" aria-label={t('文件队列')}>
             <div className="convert-panel-head">
               <span className="convert-step">01</span>
               <div className="convert-panel-title">
-                <h2>文件队列</h2>
-                <span>{queue.length ? `${queue.length} 个文件，按顺序处理` : '支持批量，一次放入多个文件'}</span>
+                <h2>{t('文件队列')}</h2>
+                <span>{queue.length ? t('{n} 个文件，按顺序处理', { n: queue.length }) : t('支持批量，一次放入多个文件')}</span>
               </div>
               <div className="convert-panel-actions">
                 {queue.length > 0 && (
                   <>
                     <button type="button" className="convert-mini" onClick={packQueue} disabled={busy || packing}>
                       {packing ? <Loader2 size={12} className="convert-spin" /> : <Archive size={12} />}
-                      {packing ? `打包 ${packProgress}%` : '打包 ZIP'}
+                      {packing ? t('打包 {n}%', { n: packProgress }) : t('打包 ZIP')}
                     </button>
                     <button type="button" className="convert-mini" onClick={clearQueue} disabled={busy}>
-                      清空
+                      {t('清空')}
                     </button>
                   </>
                 )}
@@ -465,8 +470,8 @@ export function ConvertModule() {
                 <UploadCloud size={queue.length ? 18 : 24} />
               </span>
               <span className="convert-drop-copy">
-                <strong>{dragging ? '松手，加入队列' : queue.length ? '继续添加文件' : '拖入文件，或点击选择'}</strong>
-                {!queue.length && <span>图片 · PDF · Word · 表格 · Markdown · ZIP，全部在本地处理</span>}
+                <strong>{dragging ? t('松手，加入队列') : queue.length ? t('继续添加文件') : t('拖入文件，或点击选择')}</strong>
+                {!queue.length && <span>{t('图片 · PDF · Word · 表格 · Markdown · ZIP，全部在本地处理')}</span>}
               </span>
               {!queue.length && <span className="convert-drop-plus">+</span>}
             </button>
@@ -484,7 +489,7 @@ export function ConvertModule() {
 
             {queue.length === 0 ? (
               <div className="convert-inputs">
-                <div className="convert-inputs-title">可以放入</div>
+                <div className="convert-inputs-title">{t('可以放入')}</div>
                 <div className="convert-inputs-list">
                   {[
                     ['图片', 'PNG / JPEG / WebP / GIF / BMP / SVG / AVIF / ICO'],
@@ -494,12 +499,14 @@ export function ConvertModule() {
                     ['压缩包', 'ZIP / CBZ 解包或成册'],
                   ].map(([label, text]) => (
                     <div key={label} className="convert-input-row">
-                      <span>{label}</span>
-                      <span>{text}</span>
+                      <span>{t(label)}</span>
+                      <span>{t(text)}</span>
                     </div>
                   ))}
                 </div>
-                <p className="convert-inputs-note">旧版 .doc / .ppt、CAD、音视频暂不处理；扫描版 PDF 请先用 PDF 工具箱做 OCR。</p>
+                <p className="convert-inputs-note">
+                  {t('旧版 .doc / .ppt、CAD、音视频暂不处理；扫描版 PDF 请先用 PDF 工具箱做 OCR。')}
+                </p>
               </div>
             ) : (
               <div className="convert-list">
@@ -533,25 +540,25 @@ export function ConvertModule() {
                           {state?.state === 'done' && (
                             <>
                               <span className="convert-dot" />
-                              <span className="convert-success">已生成</span>
+                              <span className="convert-success">{t('已生成')}</span>
                             </>
                           )}
                           {state?.state === 'merged' && (
                             <>
                               <span className="convert-dot" />
-                              <span className="convert-success">已合并</span>
+                              <span className="convert-success">{t('已合并')}</span>
                             </>
                           )}
                           {state?.state === 'error' && (
                             <>
                               <span className="convert-dot" />
-                              <span className="convert-failure">失败</span>
+                              <span className="convert-failure">{t('失败')}</span>
                             </>
                           )}
                           {!state && !compatibleWithTarget && (
                             <>
                               <span className="convert-dot" />
-                              <span>不适用于当前输出</span>
+                              <span>{t('不适用于当前输出')}</span>
                             </>
                           )}
                         </div>
@@ -561,7 +568,9 @@ export function ConvertModule() {
                           </div>
                         )}
                         {state?.error && <div className="convert-item-error">{state.error}</div>}
-                        {state?.mergedInto && <div className="convert-item-error is-merged">已合并进 {state.mergedInto}</div>}
+                        {state?.mergedInto && (
+                          <div className="convert-item-error is-merged">{t('已合并进 {name}', { name: state.mergedInto })}</div>
+                        )}
                       </div>
                       <span className="convert-item-target">
                         {compatibleWithTarget && target ? `.${target.ext}` : '—'}
@@ -569,7 +578,7 @@ export function ConvertModule() {
                       <button
                         type="button"
                         className="convert-item-remove"
-                        aria-label={`移除 ${item.file.name}`}
+                        aria-label={t('移除 {name}', { name: item.file.name })}
                         onClick={() => removeItem(item.id)}
                         disabled={busy}
                       >
@@ -582,12 +591,12 @@ export function ConvertModule() {
             )}
           </section>
 
-          <section className="convert-panel convert-target-panel" aria-label="输出格式">
+          <section className="convert-panel convert-target-panel" aria-label={t('输出格式')}>
             <div className="convert-panel-head">
               <span className="convert-step">02</span>
               <div className="convert-panel-title">
-                <h2>输出格式</h2>
-                <span>{queue.length ? '只显示与队列匹配的格式' : '放入文件后，可用格式会亮起'}</span>
+                <h2>{t('输出格式')}</h2>
+                <span>{queue.length ? t('只显示与队列匹配的格式') : t('放入文件后，可用格式会亮起')}</span>
               </div>
             </div>
 
@@ -595,8 +604,8 @@ export function ConvertModule() {
               {groups.map(({ group, targets }) => (
                 <div key={group} className="convert-group">
                   <div className="convert-group-head">
-                    <span>{group}</span>
-                    <span>{GROUP_DESC[group]}</span>
+                    <span>{t(group)}</span>
+                    <span>{t(GROUP_DESC[group])}</span>
                   </div>
                   <div className="convert-tiles">
                     {targets.map((spec) => {
@@ -609,12 +618,12 @@ export function ConvertModule() {
                           className={cn('convert-tile', active && 'is-active')}
                           onClick={() => chooseTarget(spec.id)}
                           disabled={count === 0 || busy}
-                          title={spec.hint}
+                          title={t(spec.hint)}
                           aria-pressed={active}
                         >
                           <span className="convert-tile-ext">.{spec.ext}</span>
-                          <span className="convert-tile-label">{spec.label}</span>
-                          <span className="convert-tile-count">{count ? `${count} 个` : '—'}</span>
+                          <span className="convert-tile-label">{t(spec.label)}</span>
+                          <span className="convert-tile-count">{count ? t('{n} 个', { n: count }) : '—'}</span>
                           {active && (
                             <span className="convert-tile-check">
                               <Check size={11} />
@@ -631,16 +640,16 @@ export function ConvertModule() {
             {target && (
               <div className="convert-selected">
                 <span className="convert-selected-ext">.{target.ext}</span>
-                <span>{target.hint}</span>
-                <span className="convert-selected-count">{compatible.length} 个文件可用</span>
+                <span>{t(target.hint)}</span>
+                <span className="convert-selected-count">{t('{n} 个文件可用', { n: compatible.length })}</span>
               </div>
             )}
 
             {target && queue.length > 0 && (
               <div className="convert-options">
                 <div className="convert-options-head">
-                  <span>选项</span>
-                  <span>仅作用于本次转换</span>
+                  <span>{t('选项')}</span>
+                  <span>{t('仅作用于本次转换')}</span>
                 </div>
 
                 {imageTarget && (
@@ -648,7 +657,7 @@ export function ConvertModule() {
                     {target.id !== 'ico' && (
                       <>
                         <div className="convert-option">
-                          <span className="convert-option-label">最长边</span>
+                          <span className="convert-option-label">{t('最长边')}</span>
                           <div className="convert-seg">
                             {[
                               { value: 0, label: '原图' },
@@ -665,30 +674,30 @@ export function ConvertModule() {
                                 onClick={() => patchImage({ maxEdge: item.value })}
                                 disabled={busy}
                               >
-                                {item.label}
+                                {t(item.label)}
                               </button>
                             ))}
                           </div>
                         </div>
                         <div className="convert-option">
-                          <span className="convert-option-label">裁剪</span>
+                          <span className="convert-option-label">{t('裁剪')}</span>
                           <select
                             value={options.image.crop}
                             onChange={(event) => patchImage({ crop: event.target.value as ConvertOptions['image']['crop'] })}
                             disabled={busy}
                           >
-                            <option value="none">保持原比例</option>
-                            <option value="1:1">居中 1:1</option>
-                            <option value="4:3">居中 4:3</option>
-                            <option value="16:9">居中 16:9</option>
-                            <option value="3:4">居中 3:4</option>
+                            <option value="none">{t('保持原比例')}</option>
+                            <option value="1:1">{t('居中 1:1')}</option>
+                            <option value="4:3">{t('居中 4:3')}</option>
+                            <option value="16:9">{t('居中 16:9')}</option>
+                            <option value="3:4">{t('居中 3:4')}</option>
                           </select>
                         </div>
                       </>
                     )}
                     {qualityVisible && (
                       <label className="convert-slider">
-                        <span className="convert-option-label">画质</span>
+                        <span className="convert-option-label">{t('画质')}</span>
                         <input
                           type="range"
                           min={55}
@@ -709,8 +718,8 @@ export function ConvertModule() {
                       disabled={busy}
                     >
                       <span>
-                        转为灰度
-                        <small>适合扫描件与打印稿</small>
+                        {t('转为灰度')}
+                        <small>{t('适合扫描件与打印稿')}</small>
                       </span>
                       <i />
                     </button>
@@ -724,8 +733,8 @@ export function ConvertModule() {
                         disabled={busy}
                       >
                         <span>
-                          合并为一份 PDF
-                          <small>关闭则每张图片单独成册</small>
+                          {t('合并为一份 PDF')}
+                          <small>{t('关闭则每张图片单独成册')}</small>
                         </span>
                         <i />
                       </button>
@@ -735,7 +744,7 @@ export function ConvertModule() {
 
                 {pdfImageTarget && (
                   <div className="convert-option">
-                    <span className="convert-option-label">渲染倍率</span>
+                    <span className="convert-option-label">{t('渲染倍率')}</span>
                     <div className="convert-seg">
                       {[1, 2, 3].map((scale) => (
                         <button
@@ -755,7 +764,7 @@ export function ConvertModule() {
                 {docPageTarget && (
                   <>
                     <div className="convert-option">
-                      <span className="convert-option-label">页面</span>
+                      <span className="convert-option-label">{t('页面')}</span>
                       <div className="convert-seg">
                         <button
                           type="button"
@@ -776,7 +785,7 @@ export function ConvertModule() {
                       </div>
                     </div>
                     <div className="convert-option">
-                      <span className="convert-option-label">正文字号</span>
+                      <span className="convert-option-label">{t('正文字号')}</span>
                       <div className="convert-seg">
                         {[
                           { value: 14, label: '紧凑' },
@@ -790,7 +799,7 @@ export function ConvertModule() {
                             onClick={() => patchDoc({ fontSize: item.value })}
                             disabled={busy}
                           >
-                            {item.label}
+                            {t(item.label)}
                           </button>
                         ))}
                       </div>
@@ -801,10 +810,10 @@ export function ConvertModule() {
                 {!imageTarget && !pdfImageTarget && !docPageTarget && (
                   <p className="convert-options-note">
                     {target.group === '表格与数据'
-                      ? '多工作表会自动分表；CSV 多于一张表时打包成 ZIP。'
+                      ? t('多工作表会自动分表；CSV 多于一张表时打包成 ZIP。')
                       : target.group === '压缩包'
-                        ? '解包结果会逐项列在结果区；CBZ 按文件名顺序合成 PDF。'
-                        : '这个格式不需要额外参数。'}
+                        ? t('解包结果会逐项列在结果区；CBZ 按文件名顺序合成 PDF。')
+                        : t('这个格式不需要额外参数。')}
                   </p>
                 )}
               </div>
@@ -818,35 +827,35 @@ export function ConvertModule() {
                 disabled={!target || !compatible.length || busy}
               >
                 {busy ? <Loader2 size={15} className="convert-spin" /> : <Play size={15} />}
-                {busy ? '正在本地转换…' : compatible.length ? `转换 ${compatible.length} 个文件` : target ? '当前格式不适用' : '选择输出格式'}
+                {busy ? t('正在本地转换…') : compatible.length ? t('转换 {n} 个文件', { n: compatible.length }) : target ? t('当前格式不适用') : t('选择输出格式')}
                 {!busy && compatible.length > 0 && <ArrowRight size={14} />}
               </button>
               <span className="convert-run-hint">
                 <ShieldCheck size={11} />
-                单文件自动保存；多个结果可在下方一并下载
+                {t('单文件自动保存；多个结果可在下方一并下载')}
               </span>
             </div>
           </section>
         </div>
 
         {results.length > 0 && (
-          <section className="convert-results" aria-label="转换结果">
+          <section className="convert-results" aria-label={t('转换结果')}>
             <div className="convert-results-head">
               <span className="convert-step">03</span>
               <div className="convert-panel-title">
-                <h2>取回结果</h2>
+                <h2>{t('取回结果')}</h2>
                 <span>
-                  {results.length} 个文件 · {formatBytes(totalResultSize)}
+                  {t('{n} 个文件', { n: results.length })} · {formatBytes(totalResultSize)}
                 </span>
               </div>
               <div className="convert-results-actions">
                 <button type="button" className="convert-mini is-strong" onClick={downloadAll} disabled={downloading}>
                   {downloading ? <Loader2 size={12} className="convert-spin" /> : <Download size={12} />}
-                  {results.length > 1 ? '全部打包下载' : '下载'}
+                  {results.length > 1 ? t('全部打包下载') : t('下载')}
                 </button>
                 <button type="button" className="convert-mini" onClick={clearResults}>
                   <Trash2 size={12} />
-                  清空结果
+                  {t('清空结果')}
                 </button>
               </div>
             </div>
@@ -871,14 +880,14 @@ export function ConvertModule() {
                         <span>{formatBytes(item.blob.size)}</span>
                         {item.note && <span>{item.note}</span>}
                       </div>
-                      {item.sourceName && <div className="convert-result-source">来自 {item.sourceName}</div>}
+                      {item.sourceName && <div className="convert-result-source">{t('来自 {name}', { name: item.sourceName })}</div>}
                     </div>
                     <button
                       type="button"
                       className="convert-result-download"
                       onClick={() => downloadResult(item)}
-                      aria-label={`下载 ${item.name}`}
-                      title="下载"
+                      aria-label={t('下载 {name}', { name: item.name })}
+                      title={t('下载')}
                     >
                       <Download size={15} />
                     </button>
@@ -893,22 +902,23 @@ export function ConvertModule() {
           <div>
             <span className="convert-foot-mark">LOCAL ONLY</span>
             <p>
-              浏览器与桌面端都在本机处理文件。转换结果直接写入下载目录，不上传、不留副本。
-              需要合并、压缩、签章或 OCR 时，前往 PDF 工具箱。
+              {t(
+                '浏览器与桌面端都在本机处理文件。转换结果直接写入下载目录，不上传、不留副本。需要合并、压缩、签章或 OCR 时，前往 PDF 工具箱。',
+              )}
             </p>
           </div>
           <div className="convert-foot-badges">
             <span>
-              <FileImage size={12} /> 图片
+              <FileImage size={12} /> {t('图片')}
             </span>
             <span>
-              <FileSpreadsheet size={12} /> 表格
+              <FileSpreadsheet size={12} /> {t('表格')}
             </span>
             <span>
-              <BookOpen size={12} /> 电子书
+              <BookOpen size={12} /> {t('电子书')}
             </span>
             <span>
-              <PackageOpen size={12} /> 压缩包
+              <PackageOpen size={12} /> {t('压缩包')}
             </span>
           </div>
         </footer>

@@ -1,5 +1,6 @@
 import type { SheetChartKind } from '../../types'
 import { CHART_COLORS, formatCompact, niceScale, type ChartData } from '../../lib/chartData'
+import { t, useT } from '../../i18n'
 
 const WIDTH = 720
 const HEIGHT = 328
@@ -19,13 +20,13 @@ function pieSlices(data: ChartData): Slice[] {
   const series = data.series[0]
   if (!series) return []
   const source = data.categories
-    .map((label, index) => ({ label: label || `项目 ${index + 1}`, value: Math.max(0, series.values[index] ?? 0) }))
+    .map((label, index) => ({ label: label || t('项目 {n}', { n: index + 1 }), value: Math.max(0, series.values[index] ?? 0) }))
     .filter((item) => item.value > 0)
     .sort((a, b) => b.value - a.value)
   const kept = source.slice(0, 8)
   if (source.length > 8) {
     kept.push({
-      label: '其他',
+      label: t('其他'),
       value: source.slice(8).reduce((sum, item) => sum + item.value, 0),
     })
   }
@@ -47,6 +48,7 @@ function arcPath(cx: number, cy: number, radius: number, start: number, end: num
 }
 
 function PieChart({ data, donut }: { data: ChartData; donut: boolean }) {
+  const t = useT()
   const slices = pieSlices(data)
   const total = slices.reduce((sum, slice) => sum + slice.value, 0)
   if (!slices.length) return null
@@ -73,11 +75,11 @@ function PieChart({ data, donut }: { data: ChartData; donut: boolean }) {
             <g key={slice.label}>
               {path ? (
                 <path d={path} fill={slice.color}>
-                  <title>{`${slice.label}：${formatCompact(slice.value)}（${(slice.ratio * 100).toFixed(1)}%）`}</title>
+                  <title>{t('{label}：{value}（{pct}%）', { label: slice.label, value: formatCompact(slice.value), pct: (slice.ratio * 100).toFixed(1) })}</title>
                 </path>
               ) : (
                 <circle cx={cx} cy={cy} r={radius} fill={slice.color}>
-                  <title>{`${slice.label}：${formatCompact(slice.value)}（100%）`}</title>
+                  <title>{t('{label}：{value}（{pct}%）', { label: slice.label, value: formatCompact(slice.value), pct: 100 })}</title>
                 </circle>
               )}
               {showLabel && (
@@ -98,7 +100,7 @@ function PieChart({ data, donut }: { data: ChartData; donut: boolean }) {
             {formatCompact(total)}
           </text>
           <text x={cx} y={cy + 14} textAnchor="middle" className="sheet-chart-donut-caption">
-            合计
+            {t('合计')}
           </text>
         </>
       )}
@@ -109,6 +111,7 @@ function PieChart({ data, donut }: { data: ChartData; donut: boolean }) {
 const STACKED_KINDS = new Set<SheetChartKind>(['stackedColumn', 'percentColumn', 'stackedBar', 'stackedArea'])
 
 function CartesianChart({ data, kind }: { data: ChartData; kind: SheetChartKind }) {
+  const t = useT()
   const categories = data.categories
   const series = data.series.slice(0, 6)
   if (!categories.length || !series.length) return null
@@ -183,7 +186,7 @@ function CartesianChart({ data, kind }: { data: ChartData; kind: SheetChartKind 
                       rx={2}
                       fill={CHART_COLORS[seriesIndex % CHART_COLORS.length]}
                     >
-                      <title>{`${label} · ${item.name}：${percent ? `${amount.toFixed(1)}%` : formatCompact(value)}`}</title>
+                      <title>{t('{label} · {name}：{value}', { label, name: item.name, value: percent ? `${amount.toFixed(1)}%` : formatCompact(value) })}</title>
                     </rect>
                   )
                 }
@@ -200,7 +203,7 @@ function CartesianChart({ data, kind }: { data: ChartData; kind: SheetChartKind 
                       rx={3}
                       fill={CHART_COLORS[seriesIndex % CHART_COLORS.length]}
                     >
-                      <title>{`${label} · ${item.name}：${formatCompact(value)}`}</title>
+                      <title>{t('{label} · {name}：{value}', { label, name: item.name, value: formatCompact(value) })}</title>
                     </rect>
                     {singleSeries && width > 26 && (
                       <text
@@ -276,11 +279,11 @@ function CartesianChart({ data, kind }: { data: ChartData; kind: SheetChartKind 
                 <g key={`${item.name}-${index}`}>
                   {categories.length <= 30 ? (
                     <circle cx={xCenter(index)} cy={y(value)} r={3.2} fill="var(--surface, #fffdf9)" stroke={color} strokeWidth={2}>
-                      <title>{`${categories[index]} · ${item.name}：${formatCompact(value)}`}</title>
+                      <title>{t('{label} · {name}：{value}', { label: categories[index], name: item.name, value: formatCompact(value) })}</title>
                     </circle>
                   ) : (
                     <rect x={xCenter(index) - 3} y={y(value) - 8} width={6} height={16} fill="transparent">
-                      <title>{`${categories[index]} · ${item.name}：${formatCompact(value)}`}</title>
+                      <title>{t('{label} · {name}：{value}', { label: categories[index], name: item.name, value: formatCompact(value) })}</title>
                     </rect>
                   )}
                 </g>
@@ -338,7 +341,7 @@ function CartesianChart({ data, kind }: { data: ChartData; kind: SheetChartKind 
                       rx={2}
                       fill={CHART_COLORS[seriesIndex % CHART_COLORS.length]}
                     >
-                      <title>{`${label} · ${item.name}：${percent ? `${amount.toFixed(1)}%` : formatCompact(value)}`}</title>
+                      <title>{t('{label} · {name}：{value}', { label, name: item.name, value: percent ? `${amount.toFixed(1)}%` : formatCompact(value) })}</title>
                     </rect>
                   )
                 }
@@ -356,7 +359,7 @@ function CartesianChart({ data, kind }: { data: ChartData; kind: SheetChartKind 
                     rx={3}
                     fill={CHART_COLORS[seriesIndex % CHART_COLORS.length]}
                   >
-                    <title>{`${label} · ${item.name}：${formatCompact(value)}`}</title>
+                    <title>{t('{label} · {name}：{value}', { label, name: item.name, value: formatCompact(value) })}</title>
                   </rect>
                 )
               })}
@@ -376,7 +379,7 @@ function CartesianChart({ data, kind }: { data: ChartData; kind: SheetChartKind 
               <path d={linePath} fill="none" stroke={color} strokeWidth={2.2} strokeLinejoin="round" strokeLinecap="round" />
               {item.values.map((value, index) => (
                 <circle key={index} cx={xCenter(index)} cy={y(value)} r={3.2} fill="var(--surface, #fffdf9)" stroke={color} strokeWidth={2}>
-                  <title>{`${categories[index]} · ${item.name}：${formatCompact(value)}`}</title>
+                  <title>{t('{label} · {name}：{value}', { label: categories[index], name: item.name, value: formatCompact(value) })}</title>
                 </circle>
               ))}
             </g>
@@ -395,6 +398,7 @@ function CartesianChart({ data, kind }: { data: ChartData; kind: SheetChartKind 
 }
 
 function ScatterChart({ data }: { data: ChartData }) {
+  const t = useT()
   const series = data.series.slice(0, 4)
   const multi = series.length >= 2
   const xValues = multi ? series[0].values : data.categories.map((_, index) => index + 1)
@@ -442,7 +446,7 @@ function ScatterChart({ data }: { data: ChartData }) {
         <g key={item.name}>
           {item.values.map((point, index) => (
             <circle key={index} cx={x(point.x)} cy={y(point.y)} r={4} fill={item.color} fillOpacity={0.82} stroke="var(--surface, #fffdf9)" strokeWidth={1.2}>
-              <title>{`${point.label ? `${point.label} · ` : ''}${item.name}：(${formatCompact(point.x)}, ${formatCompact(point.y)})`}</title>
+              <title>{t('{prefix}{name}：({x}, {y})', { prefix: point.label ? `${point.label} · ` : '', name: item.name, x: formatCompact(point.x), y: formatCompact(point.y) })}</title>
             </circle>
           ))}
         </g>
@@ -452,6 +456,7 @@ function ScatterChart({ data }: { data: ChartData }) {
 }
 
 function RadarChart({ data }: { data: ChartData }) {
+  const t = useT()
   const categories = data.categories.slice(0, 12)
   const series = data.series.slice(0, 6)
   if (categories.length < 3 || !series.length) return null
@@ -505,7 +510,7 @@ function RadarChart({ data }: { data: ChartData }) {
             <polygon points={points.map((point) => point.join(' ')).join(' ')} fill={color} fillOpacity={0.12} stroke={color} strokeWidth={2} />
             {points.map((point, index) => (
               <circle key={index} cx={point[0]} cy={point[1]} r={2.8} fill="var(--surface, #fffdf9)" stroke={color} strokeWidth={2}>
-                <title>{`${categories[index]} · ${item.name}：${formatCompact(item.values[index] ?? 0)}`}</title>
+                <title>{t('{label} · {name}：{value}', { label: categories[index], name: item.name, value: formatCompact(item.values[index] ?? 0) })}</title>
               </circle>
             ))}
           </g>
@@ -516,6 +521,7 @@ function RadarChart({ data }: { data: ChartData }) {
 }
 
 export function SheetChartView({ data, kind }: { data: ChartData; kind: SheetChartKind }) {
+  const t = useT()
   const pie = kind === 'pie' || kind === 'donut'
   const slices = pie ? pieSlices(data) : []
   const empty = pie ? !slices.length : !data.categories.length || !data.series.length
@@ -523,7 +529,7 @@ export function SheetChartView({ data, kind }: { data: ChartData; kind: SheetCha
   if (empty) {
     return (
       <div className="sheet-chart-empty">
-        <span>所选区域还没有可绘制的数值</span>
+        <span>{t('所选区域还没有可绘制的数值')}</span>
       </div>
     )
   }
@@ -551,7 +557,7 @@ export function SheetChartView({ data, kind }: { data: ChartData; kind: SheetCha
 
   return (
     <div className={pie ? 'sheet-chart-view is-pie' : 'sheet-chart-view'}>
-      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="数据图表">
+      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={t('数据图表')}>
         {pie ? (
           <PieChart data={data} donut={kind === 'donut'} />
         ) : kind === 'scatter' ? (

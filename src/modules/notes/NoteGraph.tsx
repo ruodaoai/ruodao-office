@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { NoteRecord } from '../../types'
 import { cn } from '../../lib/utils'
+import { t, useT } from '../../i18n'
 
 export interface GraphEdge {
   source: string
@@ -26,11 +27,12 @@ interface GraphPoint {
 }
 
 function shortTitle(title: string): string {
-  const clean = title.trim() || '未命名'
+  const clean = title.trim() || t('未命名')
   return clean.length > 8 ? `${clean.slice(0, 8)}…` : clean
 }
 
 export function NoteGraph({ notes, edges, activeId, onOpen }: NoteGraphProps) {
+  const t = useT()
   const [hoveredId, setHoveredId] = useState<string | null>(null)
 
   const { nodes, links, neighbors } = useMemo(() => {
@@ -141,7 +143,7 @@ export function NoteGraph({ notes, edges, activeId, onOpen }: NoteGraphProps) {
       className="note-graph"
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
       role="img"
-      aria-label="笔记关系图谱"
+      aria-label={t('笔记关系图谱')}
       onMouseLeave={() => setHoveredId(null)}
     >
       <g>
@@ -172,7 +174,7 @@ export function NoteGraph({ notes, edges, activeId, onOpen }: NoteGraphProps) {
               className={cn('ng-node', isActive && 'current', isHot && 'hot', focusId && !isHot && !isActive && 'dim')}
               role="button"
               tabIndex={0}
-              aria-label={`打开笔记 ${node.title}`}
+              aria-label={t('打开笔记 {title}', { title: node.title })}
               onClick={() => onOpen(node.id)}
               onMouseEnter={() => setHoveredId(node.id)}
               onKeyDown={(event) => {
@@ -182,7 +184,7 @@ export function NoteGraph({ notes, edges, activeId, onOpen }: NoteGraphProps) {
                 }
               }}
             >
-              <title>{`${node.title} · ${node.degree} 条连接`}</title>
+              <title>{t('{title} · {count} 条连接', { title: node.title, count: node.degree })}</title>
               {isActive && <circle className="ng-halo" cx={node.x} cy={node.y} r={radius + 6} />}
               <circle className="ng-dot" cx={node.x} cy={node.y} r={radius} />
               {showLabel && (

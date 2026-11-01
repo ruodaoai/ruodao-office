@@ -11,6 +11,7 @@ import { SheetEvaluator } from './formula'
 import { cellKey, colToName } from './sheetRefs'
 import { clamp, formatCellNumber } from './utils'
 import { contentBlock, type SheetBlock } from './xlsx'
+import { isEnglish, t } from '../i18n'
 
 export const CHART_COLORS = ['#c8442b', '#2f7457', '#a9772d', '#35587a', '#7a4b8a', '#b5654f']
 
@@ -99,7 +100,7 @@ function labelForRow(tab: SheetTab, evaluator: SheetEvaluator, row: number, col:
     const text = cellText(tab, evaluator, row, col)
     if (text) return text
   }
-  return `第 ${row + 1} 行`
+  return t('第 {n} 行', { n: row + 1 })
 }
 
 export function chartRangeOf(chart: SheetChart, tab: SheetTab) {
@@ -134,14 +135,14 @@ export function buildChartData(tab: SheetTab, chart: SheetChart, evaluator = new
   if (headerRow && dataRows.length === 1 && !chart.headerCol) {
     return {
       categories: valueCols.map((col) => cellText(tab, evaluator, r1, col) || colToName(col)),
-      series: [{ name: '数值', values: valueCols.map((col) => cellNumber(evaluator, dataRows[0], col) ?? 0) }],
+      series: [{ name: t('数值'), values: valueCols.map((col) => cellNumber(evaluator, dataRows[0], col) ?? 0) }],
     }
   }
 
   if (chart.headerCol && valueCols.length === 0) {
     return {
       categories: dataRows.map((row) => labelForRow(tab, evaluator, row, c1, true)),
-      series: [{ name: '数值', values: dataRows.map((row) => cellNumber(evaluator, row, c1) ?? 0) }],
+      series: [{ name: t('数值'), values: dataRows.map((row) => cellNumber(evaluator, row, c1) ?? 0) }],
     }
   }
 
@@ -149,7 +150,7 @@ export function buildChartData(tab: SheetTab, chart: SheetChart, evaluator = new
   const series: ChartSeries[] = valueCols.map((col, index) => {
     const header = headerRow ? cellText(tab, evaluator, r1, col) : ''
     return {
-      name: header || `系列 ${index + 1}`,
+      name: header || t('系列 {n}', { n: index + 1 }),
       values: dataRows.map((row) => cellNumber(evaluator, row, col) ?? 0),
     }
   })
@@ -365,6 +366,12 @@ export function buildConditionalIndex(tab: SheetTab, rules: ConditionalRule[] | 
 export function formatCompact(value: number): string {
   if (!Number.isFinite(value)) return '—'
   const abs = Math.abs(value)
+  if (isEnglish()) {
+    if (abs >= 1e9) return `${(value / 1e9).toFixed(abs >= 1e10 ? 1 : 2)}B`
+    if (abs >= 1e6) return `${(value / 1e6).toFixed(abs >= 1e7 ? 1 : 2)}M`
+    if (abs >= 1e3) return `${(value / 1e3).toFixed(abs >= 1e4 ? 1 : 2)}K`
+    return value.toLocaleString('en-US', { maximumFractionDigits: abs >= 1 ? 2 : 3 })
+  }
   if (abs >= 1e8) return `${(value / 1e8).toFixed(abs >= 1e9 ? 1 : 2)}亿`
   if (abs >= 1e4) return `${(value / 1e4).toFixed(abs >= 1e5 ? 1 : 2)}万`
   if (abs >= 1000) return value.toLocaleString('zh-CN', { maximumFractionDigits: 0 })

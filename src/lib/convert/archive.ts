@@ -1,6 +1,7 @@
 import type { ImageOptions } from './image'
 import { imageToJpeg, imagesToPdfBlob } from './image'
 import { fileBase, fileExtension, formatBytes } from './formats'
+import { t } from '../../i18n'
 
 const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'avif'])
 const SKIP = /(^|\/)(__MACOSX|\.DS_Store|Thumbs\.db|desktop\.ini)/i
@@ -39,12 +40,12 @@ export interface ArchiveEntry {
 }
 
 async function loadZip(file: File) {
-  if (file.size > 160 * 1024 * 1024) throw new Error('压缩包超过 160MB，请拆分后再处理')
+  if (file.size > 160 * 1024 * 1024) throw new Error(t('压缩包超过 160MB，请拆分后再处理'))
   const JSZip = (await import('jszip')).default
   try {
     return await JSZip.loadAsync(await file.arrayBuffer())
   } catch {
-    throw new Error('无法读取这个压缩包，请确认它没有加密或损坏')
+    throw new Error(t('无法读取这个压缩包，请确认它没有加密或损坏'))
   }
 }
 
@@ -52,11 +53,11 @@ export async function extractArchive(
   file: File,
   onProgress?: (ratio: number, label?: string) => void,
 ): Promise<ArchiveEntry[]> {
-  onProgress?.(0.1, '读取压缩包')
+  onProgress?.(0.1, t('读取压缩包'))
   const zip = await loadZip(file)
   const names = Object.keys(zip.files).filter((name) => !zip.files[name].dir && !SKIP.test(name))
-  if (!names.length) throw new Error('压缩包里没有可导出的文件')
-  if (names.length > 500) throw new Error('压缩包内文件超过 500 个，请先在系统中解压后分批转换')
+  if (!names.length) throw new Error(t('压缩包里没有可导出的文件'))
+  if (names.length > 500) throw new Error(t('压缩包内文件超过 500 个，请先在系统中解压后分批转换'))
   const entries: ArchiveEntry[] = []
   for (let index = 0; index < names.length; index += 1) {
     const path = names[index]
@@ -68,7 +69,7 @@ export async function extractArchive(
       blob: new Blob([blob], { type: mimeForName(base) }),
       note: `${path}${blob.size ? ` · ${formatBytes(blob.size)}` : ''}`,
     })
-    onProgress?.(0.1 + (0.9 * (index + 1)) / names.length, `解出 ${index + 1}/${names.length}`)
+    onProgress?.(0.1 + (0.9 * (index + 1)) / names.length, t('解出 {current}/{total}', { current: index + 1, total: names.length }))
     if (index % 6 === 0) await new Promise((resolve) => setTimeout(resolve, 0))
   }
   return entries
@@ -79,13 +80,13 @@ export async function archiveImagesToPdf(
   options: ImageOptions,
   onProgress?: (ratio: number, label?: string) => void,
 ): Promise<{ blob: Blob; pages: number }> {
-  onProgress?.(0.05, '读取图片压缩包')
+  onProgress?.(0.05, t('读取图片压缩包'))
   const zip = await loadZip(file)
   const names = Object.keys(zip.files)
     .filter((name) => !zip.files[name].dir && !SKIP.test(name) && IMAGE_EXTENSIONS.has(fileExtension(name)))
     .sort((a, b) => a.localeCompare(b, 'zh-CN', { numeric: true }))
-  if (!names.length) throw new Error('压缩包里没有 PNG、JPEG 或 WebP 图片')
-  if (names.length > 300) throw new Error('图片超过 300 张，请分批合成')
+  if (!names.length) throw new Error(t('压缩包里没有 PNG、JPEG 或 WebP 图片'))
+  if (names.length > 300) throw new Error(t('图片超过 300 张，请分批合成'))
   const images: Array<{ blob: Blob; width: number; height: number }> = []
   for (let index = 0; index < names.length; index += 1) {
     const path = names[index]
@@ -94,10 +95,10 @@ export async function archiveImagesToPdf(
     const imageFile = new File([blob], name, { type: mimeForName(name) })
     const image = await imageToJpeg(imageFile, { ...options, crop: 'none', grayscale: false })
     images.push(image)
-    onProgress?.(0.05 + (0.55 * (index + 1)) / names.length, `整理 ${index + 1}/${names.length}`)
+    onProgress?.(0.05 + (0.55 * (index + 1)) / names.length, t('整理 {current}/{total}', { current: index + 1, total: names.length }))
     if (index % 5 === 0) await new Promise((resolve) => setTimeout(resolve, 0))
   }
-  const bytes = await imagesToPdfBlob(images, (ratio) => onProgress?.(0.6 + ratio * 0.4, '合成 PDF 画册'))
+  const bytes = await imagesToPdfBlob(images, (ratio) => onProgress?.(0.6 + ratio * 0.4, t('合成 PDF 画册')))
   return { blob: new Blob([new Uint8Array(bytes)], { type: 'application/pdf' }), pages: images.length }
 }
 
@@ -105,7 +106,7 @@ export async function packArchive(
   files: File[],
   onProgress?: (ratio: number, label?: string) => void,
 ): Promise<Blob> {
-  if (!files.length) throw new Error('队列里没有文件')
+  if (!files.length) throw new Error(t('队列里没有文件'))
   const JSZip = (await import('jszip')).default
   const zip = new JSZip()
   const used = new Set<string>()
@@ -120,11 +121,11 @@ export async function packArchive(
     }
     used.add(name)
     zip.file(name, file)
-    onProgress?.(0.05 + (0.35 * (index + 1)) / files.length, `加入 ${index + 1}/${files.length}`)
+    onProgress?.(0.05 + (0.35 * (index + 1)) / files.length, t('加入 {current}/{total}', { current: index + 1, total: files.length }))
   })
   const blob = await zip.generateAsync(
     { type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } },
-    (meta) => onProgress?.(0.4 + meta.percent / 100 * 0.6, '压缩'),
+    (meta) => onProgress?.(0.4 + (meta.percent / 100) * 0.6, t('压缩')),
   )
   onProgress?.(1)
   return blob

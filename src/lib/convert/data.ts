@@ -1,5 +1,6 @@
 import { documentToHtml } from './docs'
 import { escapeHtml } from '../utils'
+import { t } from '../../i18n'
 import { fileBase, fileExtension } from './formats'
 
 export interface DataSheet {
@@ -63,16 +64,19 @@ async function readWorkbook(file: File, XLSX: XlsxModule): Promise<DataSheet[]> 
       cellDates: true,
     })
   } catch {
-    throw new Error('无法解析这个表格文件，请检查文件是否损坏')
+    throw new Error(t('无法解析这个表格文件，请检查文件是否损坏'))
   }
   const sheets = workbook.SheetNames.map((name) => {
     const sheet = workbook.Sheets[name]
     const matrix = sheet
       ? (XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '', blankrows: false }) as unknown[][])
       : []
-    return { name: name.trim() || '工作表', rows: trimRows(matrix.map((row) => (Array.isArray(row) ? row.map(cellText) : [cellText(row)]))) }
+    return {
+      name: name.trim() || t('工作表'),
+      rows: trimRows(matrix.map((row) => (Array.isArray(row) ? row.map(cellText) : [cellText(row)]))),
+    }
   }).filter((sheet) => sheet.rows.length)
-  if (!sheets.length) throw new Error('这个表格文件里没有可转换的数据')
+  if (!sheets.length) throw new Error(t('这个表格文件里没有可转换的数据'))
   return sheets
 }
 
@@ -93,11 +97,11 @@ function rowsFromArray(value: unknown[]): string[][] {
   if (value.every((item) => Array.isArray(item))) {
     return value.map((row) => (row as unknown[]).map(cellText))
   }
-  return [['值'], ...value.map((item) => [cellText(item)])]
+  return [[t('值')], ...value.map((item) => [cellText(item)])]
 }
 
 export function jsonToSheets(value: unknown): DataSheet[] {
-  if (value == null) throw new Error('JSON 内容为空')
+  if (value == null) throw new Error(t('JSON 内容为空'))
   if (typeof value === 'object' && !Array.isArray(value)) {
     const record = value as Record<string, unknown>
     if (Array.isArray(record.sheets)) {
@@ -110,7 +114,7 @@ export function jsonToSheets(value: unknown): DataSheet[] {
             : Array.isArray(sheet.data)
               ? rowsFromArray(sheet.data)
               : []
-          return { name: cellText(sheet.name) || `工作表 ${index + 1}`, rows: trimRows(rows) }
+          return { name: cellText(sheet.name) || t('工作表 {n}', { n: index + 1 }), rows: trimRows(rows) }
         })
         .filter((sheet): sheet is DataSheet => Boolean(sheet && sheet.rows.length))
       if (sheets.length) return sheets
@@ -118,20 +122,20 @@ export function jsonToSheets(value: unknown): DataSheet[] {
     const arrayEntries = Object.entries(record).filter(([, item]) => Array.isArray(item))
     if (arrayEntries.length) {
       return arrayEntries.map(([key, item]) => ({
-        name: key || '工作表',
+        name: key || t('工作表'),
         rows: trimRows(rowsFromArray(item as unknown[])),
       }))
     }
     const rows = Object.entries(record).map(([key, item]) => [key, cellText(item)])
-    if (!rows.length) throw new Error('JSON 里没有可转换的数据')
-    return [{ name: '数据', rows: [['键', '值'], ...rows] }]
+    if (!rows.length) throw new Error(t('JSON 里没有可转换的数据'))
+    return [{ name: t('数据'), rows: [[t('键'), t('值')], ...rows] }]
   }
   if (Array.isArray(value)) {
     const rows = trimRows(rowsFromArray(value))
-    if (!rows.length) throw new Error('JSON 数组为空')
-    return [{ name: '数据', rows }]
+    if (!rows.length) throw new Error(t('JSON 数组为空'))
+    return [{ name: t('数据'), rows }]
   }
-  return [{ name: '数据', rows: [['值'], [cellText(value)]] }]
+  return [{ name: t('数据'), rows: [[t('值')], [cellText(value)]] }]
 }
 
 export async function readDataFile(file: File): Promise<DataSheet[]> {
@@ -141,7 +145,7 @@ export async function readDataFile(file: File): Promise<DataSheet[]> {
     try {
       parsed = JSON.parse(await file.text())
     } catch {
-      throw new Error('JSON 格式有误，请检查逗号与引号')
+      throw new Error(t('JSON 格式有误，请检查逗号与引号'))
     }
     return jsonToSheets(parsed)
   }
@@ -171,7 +175,7 @@ export function sheetsToJson(sheets: DataSheet[]): string {
   const output: Record<string, unknown> = {}
   const names = new Set<string>()
   sheets.forEach((sheet, index) => {
-    let name = sheet.name || `工作表 ${index + 1}`
+    let name = sheet.name || t('工作表 {n}', { n: index + 1 })
     if (names.has(name)) name = `${name} ${index + 1}`
     names.add(name)
     output[name] = rowsToJson(sheet.rows)
@@ -188,7 +192,7 @@ export function rowsToCsv(rows: string[][]): string {
 }
 
 function safeSheetName(name: string, index: number, used: Set<string>): string {
-  const base = name.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60) || `工作表 ${index + 1}`
+  const base = name.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60) || t('工作表 {n}', { n: index + 1 })
   let result = base
   let suffix = 2
   while (used.has(result)) {
@@ -223,13 +227,13 @@ function sheetsToHtml(title: string, sheets: DataSheet[]): string {
         .slice(1)
         .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell) || '&nbsp;'}</td>`).join('')}</tr>`)
         .join('')
-      return `<section><h2>${escapeHtml(sheet.name)}</h2><table>${thead}<tbody>${tbody}</tbody></table><p class="sheet-meta">${Math.max(
-        0,
-        rows.length - 1,
-      )} 行 · ${rows[0]?.length ?? 0} 列</p></section>`
+      return `<section><h2>${escapeHtml(sheet.name)}</h2><table>${thead}<tbody>${tbody}</tbody></table><p class="sheet-meta">${t(
+        '{rows} 行 · {cols} 列',
+        { rows: Math.max(0, rows.length - 1), cols: rows[0]?.length ?? 0 },
+      )}</p></section>`
     })
     .join('\n')
-  return documentToHtml(title, body, `表格数据 · ${sheets.length} 个工作表`)
+  return documentToHtml(title, body, t('表格数据 · {n} 个工作表', { n: sheets.length }))
 }
 
 function sheetsToMarkdown(sheets: DataSheet[]): string {
@@ -270,24 +274,25 @@ export async function convertData(
   onProgress?.(0.4)
   const format = target.split('-')[1]
   const base = fileBase(file.name)
+  const sheetNote = t('{n} 个工作表', { n: sheets.length })
   if (format === 'xlsx') {
     const blob = await sheetsToXlsxBlob(sheets)
     onProgress?.(1)
-    return { blob, ext: 'xlsx', note: `${sheets.length} 个工作表` }
+    return { blob, ext: 'xlsx', note: sheetNote }
   }
   if (format === 'json') {
     const text = sheetsToJson(sheets)
     onProgress?.(1)
-    return { blob: new Blob([text], { type: 'application/json;charset=utf-8' }), ext: 'json', note: `${sheets.length} 个工作表` }
+    return { blob: new Blob([text], { type: 'application/json;charset=utf-8' }), ext: 'json', note: sheetNote }
   }
   if (format === 'html') {
     const html = sheetsToHtml(base, sheets)
     onProgress?.(1)
-    return { blob: new Blob([html], { type: 'text/html;charset=utf-8' }), ext: 'html', note: `${sheets.length} 个工作表` }
+    return { blob: new Blob([html], { type: 'text/html;charset=utf-8' }), ext: 'html', note: sheetNote }
   }
   if (format === 'md') {
     onProgress?.(1)
-    return { blob: new Blob([sheetsToMarkdown(sheets)], { type: 'text/markdown;charset=utf-8' }), ext: 'md', note: `${sheets.length} 个工作表` }
+    return { blob: new Blob([sheetsToMarkdown(sheets)], { type: 'text/markdown;charset=utf-8' }), ext: 'md', note: sheetNote }
   }
   if (format === 'csv') {
     if (sheets.length === 1) {
@@ -302,7 +307,7 @@ export async function convertData(
     })
     const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } })
     onProgress?.(1)
-    return { blob, ext: 'zip', note: `${sheets.length} 个 CSV 已打包` }
+    return { blob, ext: 'zip', note: t('{n} 个 CSV 已打包', { n: sheets.length }) }
   }
-  throw new Error('未知的表格输出格式')
+  throw new Error(t('未知的表格输出格式'))
 }

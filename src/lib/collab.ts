@@ -1,4 +1,5 @@
 import * as Y from 'yjs'
+import { t } from '../i18n'
 
 export type CollabKind = 'note' | 'doc'
 export type CollabRole = 'host' | 'guest'
@@ -138,7 +139,7 @@ export class CollabClient {
     const id = randomId()
     this.me = {
       id,
-      name: options.me.name.trim().slice(0, 40) || '协作者',
+      name: options.me.name.trim().slice(0, 40) || t('协作者'),
       color: colorForPeer(id),
       kind: options.kind,
       at: Date.now(),
@@ -164,7 +165,7 @@ export class CollabClient {
       url.searchParams.set('room', this.options.roomId)
       socket = new WebSocket(url.toString())
     } catch {
-      this.handlers.onStatus('offline', '协作服务地址格式不正确')
+      this.handlers.onStatus('offline', t('协作服务地址格式不正确'))
       return
     }
     this.socket = socket
@@ -192,7 +193,10 @@ export class CollabClient {
         this.handlers.onStatus('offline', null)
         return
       }
-      this.handlers.onStatus(this.welcomed ? 'reconnecting' : 'connecting', '正在重新连接协作服务…')
+      this.handlers.onStatus(
+        this.welcomed ? 'reconnecting' : 'connecting',
+        t('正在重新连接协作服务…'),
+      )
       const delay = Math.min(15_000, 800 * 2 ** Math.min(this.retry, 5))
       this.retry += 1
       this.reconnectTimer = window.setTimeout(() => this.connect(), delay)

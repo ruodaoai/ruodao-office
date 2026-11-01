@@ -3,7 +3,7 @@ import type { ModuleId } from '../types'
 import { uid } from '../lib/utils'
 
 export type ToastKind = 'success' | 'error' | 'info'
-export type SettingsTab = 'ai' | 'data' | 'about'
+export type SettingsTab = 'general' | 'ai' | 'data' | 'about'
 
 export interface ToastItem {
   id: string

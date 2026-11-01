@@ -1,5 +1,6 @@
 import { renderMarkdown } from './markdown'
 import { escapeHtml } from './utils'
+import { t } from '../i18n'
 
 export interface OutlineItem {
   level: number
@@ -12,7 +13,7 @@ export function normalizeNoteTitle(title: string): string {
 
 export function uniqueNoteTitle(existing: string[], base: string): string {
   const taken = new Set(existing.map(normalizeNoteTitle))
-  const clean = base.trim() || '未命名笔记'
+  const clean = base.trim() || t('未命名笔记')
   if (!taken.has(normalizeNoteTitle(clean))) return clean
   let index = 2
   while (taken.has(normalizeNoteTitle(`${clean} ${index}`))) index += 1
@@ -219,7 +220,7 @@ export function buildStandaloneNoteHtml(title: string, markdown: string, exporte
     anchor.setAttribute('target', '_blank')
     anchor.setAttribute('rel', 'noopener noreferrer')
   })
-  const body = parsed.body.innerHTML || '<p class="empty">这篇笔记还没有正文。</p>'
+  const body = parsed.body.innerHTML || `<p class="empty">${t('这篇笔记还没有正文。')}</p>`
   return `<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -231,15 +232,15 @@ export function buildStandaloneNoteHtml(title: string, markdown: string, exporte
 <body>
 <main class="doc">
   <header class="doc-head">
-    <span>若道办公 · 笔记</span>
+    <span>${t('若道办公 · 笔记')}</span>
     <span>${escapeHtml(exportedAt)}</span>
   </header>
   <h1 class="doc-title">${escapeHtml(title)}</h1>
-  <span class="doc-mark">双向链接笔记</span>
+  <span class="doc-mark">${t('双向链接笔记')}</span>
   <div class="prose">${body}</div>
   <footer class="doc-foot">
-    <span>导出自若道办公</span>
-    <span>文件与内容只保存在本机</span>
+    <span>${t('导出自若道办公')}</span>
+    <span>${t('文件与内容只保存在本机')}</span>
   </footer>
 </main>
 </body>

@@ -63,6 +63,7 @@ import {
 } from '../../lib/utils'
 import { useLibrary } from '../../store/library'
 import { useUI } from '../../store/ui'
+import { useT } from '../../i18n'
 import { publishCollabCursor } from '../../store/collab'
 import type { AiContext, NoteRecord } from '../../types'
 import { NoteGraph, type GraphEdge } from './NoteGraph'
@@ -118,6 +119,7 @@ function isNarrowViewport(): boolean {
 }
 
 export function NotesModule() {
+  const t = useT()
   const notes = useLibrary((s) => s.notes)
   const activeNoteId = useLibrary((s) => s.activeNoteId)
   const setActive = useLibrary((s) => s.setActive)
@@ -238,14 +240,14 @@ export function NotesModule() {
     doc.body.querySelectorAll<HTMLAnchorElement>('a.wikilink').forEach((anchor) => {
       const target = anchor.getAttribute('data-wikilink') ?? ''
       if (graphInfo.titleMap.has(normalizeNoteTitle(target))) {
-        anchor.setAttribute('title', `打开「${target}」`)
+        anchor.setAttribute('title', t('打开「{title}」', { title: target }))
       } else {
         anchor.classList.add('missing')
-        anchor.setAttribute('title', '尚未创建 · 点击新建')
+        anchor.setAttribute('title', t('尚未创建 · 点击新建'))
       }
     })
     return doc.body.innerHTML
-  }, [body, activeNote, graphInfo.titleMap])
+  }, [body, activeNote, graphInfo.titleMap, t])
 
   const filteredNotes = useMemo(() => {
     const keyword = query.trim().toLowerCase()
@@ -330,7 +332,7 @@ export function NotesModule() {
     contextRef.current = {
       kind: 'note',
       title: activeNote.title,
-      text: `${activeNote.content.trim()}\n\n【关联笔记】${relations.length ? relations.join('、') : '暂无'}`,
+      text: `${activeNote.content.trim()}\n\n${t('【关联笔记】')}${relations.length ? relations.join(t('、')) : t('暂无')}`,
     }
   }, [activeNote, activeOutgoing, activeBacklinks])
 
@@ -454,7 +456,7 @@ export function NotesModule() {
     setFilter('all')
     if (mode === 'read') setMode('split')
     closeRailOnNarrow()
-    toast(`已新建「${createdTitle}」`, 'success')
+    toast(t('已新建「{title}」', { title: createdTitle }), 'success')
   }
 
   const createBlankNote = () => {
@@ -479,7 +481,7 @@ export function NotesModule() {
       return
     }
     if (/[\[\]|]/.test(nextTitle)) {
-      toast('标题不能包含 [ ] | 字符', 'error')
+      toast(t('标题不能包含 [ ] | 字符'), 'error')
       setTitleDraft(note.title)
       return
     }
@@ -488,7 +490,7 @@ export function NotesModule() {
       (item) => item.id !== note.id && normalizeNoteTitle(item.title) === normalizeNoteTitle(nextTitle),
     )
     if (clash) {
-      toast(`已存在同名笔记「${clash.title}」`, 'error')
+      toast(t('已存在同名笔记「{title}」', { title: clash.title }), 'error')
       setTitleDraft(note.title)
       return
     }
@@ -513,7 +515,10 @@ export function NotesModule() {
     }
 
     state.updateNote(note.id, { title: nextTitle, content: nextContent })
-    toast(linkUpdates ? `标题已更新，同步 ${linkUpdates} 处双链` : '标题已更新', 'success')
+    toast(
+      linkUpdates ? t('标题已更新，同步 {count} 处双链', { count: linkUpdates }) : t('标题已更新'),
+      'success',
+    )
   }
 
   const handleTitleKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
@@ -604,12 +609,12 @@ export function NotesModule() {
     const mod = event.ctrlKey || event.metaKey
     if (mod && event.key.toLowerCase() === 'b') {
       event.preventDefault()
-      wrapSelection('**', '**', '粗体')
+      wrapSelection('**', '**', t('粗体'))
       return
     }
     if (mod && event.key.toLowerCase() === 'i') {
       event.preventDefault()
-      wrapSelection('_', '_', '斜体')
+      wrapSelection('_', '_', t('斜体'))
       return
     }
     if (event.key === 'Tab') {
@@ -684,8 +689,9 @@ export function NotesModule() {
       replaceContent(content.slice(0, start) + text + content.slice(end), urlStart, urlStart + 8)
       return
     }
-    const text = '[链接文字](https://)'
-    replaceContent(content.slice(0, start) + text + content.slice(end), start + 1, start + 5)
+    const label = t('链接文字')
+    const text = `[${label}](https://)`
+    replaceContent(content.slice(0, start) + text + content.slice(end), start + 1, start + 1 + label.length)
   }
 
   const insertCodeBlock = () => {
@@ -694,7 +700,7 @@ export function NotesModule() {
     const content = activeNote.content
     const start = el.selectionStart
     const end = el.selectionEnd
-    const selected = content.slice(start, end) || '代码'
+    const selected = content.slice(start, end) || t('代码')
     const prefix = start > 0 && !content.slice(0, start).endsWith('\n') ? '\n' : ''
     const suffix = end < content.length && !content.slice(end).startsWith('\n') ? '\n' : ''
     const block = `${prefix}\`\`\`\n${selected}\n\`\`\`\n${suffix}`
@@ -807,24 +813,24 @@ export function NotesModule() {
 
   const importMarkdown = async (file: File) => {
     if (file.size > 5 * 1024 * 1024) {
-      toast('Markdown 文件不能超过 5MB', 'error')
+      toast(t('Markdown 文件不能超过 5MB'), 'error')
       return
     }
     setImporting(true)
     try {
       const text = (await readFileAsText(file)).replace(/^\uFEFF/, '')
       const heading = /^\s*#\s+(.+?)\s*$/m.exec(text)
-      const base = heading?.[1]?.trim() || file.name.replace(/\.[^.]+$/, '') || '导入的笔记'
+      const base = heading?.[1]?.trim() || file.name.replace(/\.[^.]+$/, '') || t('导入的笔记')
       const title = uniqueNoteTitle(notes.map((note) => note.title), base)
-      if (!text.trim()) throw new Error('这个文件没有内容')
+      if (!text.trim()) throw new Error(t('这个文件没有内容'))
       createNote({ title, content: text })
       setQuery('')
       setFilter('all')
       setMode('read')
       setRailTab('links')
-      toast('Markdown 已导入为笔记', 'success')
+      toast(t('Markdown 已导入为笔记'), 'success')
     } catch (error) {
-      toast((error as Error).message || '导入失败，请检查文件', 'error')
+      toast((error as Error).message || t('导入失败，请检查文件'), 'error')
     } finally {
       setImporting(false)
       if (fileRef.current) fileRef.current.value = ''
@@ -834,21 +840,21 @@ export function NotesModule() {
   const exportMarkdown = () => {
     if (!activeNote) return
     downloadText(activeNote.content, safeFilename(activeNote.title, 'md'), 'text/markdown')
-    toast('Markdown 已导出', 'success')
+    toast(t('Markdown 已导出'), 'success')
   }
 
   const exportHtml = () => {
     if (!activeNote) return
     const html = buildStandaloneNoteHtml(activeNote.title, body, formatDateTime(Date.now()))
     downloadText(html, safeFilename(activeNote.title, 'html'), 'text/html')
-    toast('HTML 已导出', 'success')
+    toast(t('HTML 已导出'), 'success')
   }
 
   const printCurrent = () => {
     if (!activeNote) return
     const html = buildStandaloneNoteHtml(activeNote.title, body, formatDateTime(Date.now()))
-    if (printHtmlDocument(html)) toast('正在打开打印视图', 'info')
-    else toast('无法打开打印视图，请检查浏览器权限', 'error')
+    if (printHtmlDocument(html)) toast(t('正在打开打印视图'), 'info')
+    else toast(t('无法打开打印视图，请检查浏览器权限'), 'error')
   }
 
   const askAboutNote = () => {
@@ -856,17 +862,23 @@ export function NotesModule() {
     openAiTask()
   }
 
-  const activeLabel = activeNote ? `笔记「${activeNote.title}」` : '当前笔记'
+  const activeLabel = activeNote ? t('笔记「{title}」', { title: activeNote.title }) : t('当前笔记')
 
   return (
     <div className={cn('notes-shell', railOpen && 'rail-open', !activeNote && 'notes-shell-empty')}>
-      <aside className="notes-side" aria-label="笔记列表">
+      <aside className="notes-side" aria-label={t('笔记列表')}>
         <div className="notes-side-head">
           <div className="notes-side-title-wrap">
-            <h1 className="notes-side-title">笔记</h1>
+            <h1 className="notes-side-title">{t('笔记')}</h1>
             <span className="notes-side-count">{notes.length}</span>
           </div>
-          <button type="button" className="icon-btn" onClick={createBlankNote} title="新建笔记" aria-label="新建笔记">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={createBlankNote}
+            title={t('新建笔记')}
+            aria-label={t('新建笔记')}
+          >
             <Plus size={16} />
           </button>
         </div>
@@ -876,31 +888,36 @@ export function NotesModule() {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="搜索标题与正文"
-            aria-label="搜索笔记"
+            placeholder={t('搜索标题与正文')}
+            aria-label={t('搜索笔记')}
           />
           {query && (
-            <button type="button" className="notes-search-clear" onClick={() => setQuery('')} aria-label="清除搜索">
+            <button
+              type="button"
+              className="notes-search-clear"
+              onClick={() => setQuery('')}
+              aria-label={t('清除搜索')}
+            >
               <X size={12} />
             </button>
           )}
         </div>
 
-        <div className="notes-filters" role="group" aria-label="笔记筛选">
+        <div className="notes-filters" role="group" aria-label={t('笔记筛选')}>
           <button
             type="button"
             className={cn('notes-filter', filter === 'all' && 'active')}
             onClick={() => setFilter('all')}
           >
-            全部 <span>{notes.length}</span>
+            {t('全部')} <span>{notes.length}</span>
           </button>
           <button
             type="button"
             className={cn('notes-filter', filter === 'orphan' && 'active')}
             onClick={() => setFilter('orphan')}
-            title="没有出链也没有反链的笔记"
+            title={t('没有出链也没有反链的笔记')}
           >
-            孤立 <span>{graphInfo.orphanCount}</span>
+            {t('孤立')} <span>{graphInfo.orphanCount}</span>
           </button>
         </div>
 
@@ -920,17 +937,17 @@ export function NotesModule() {
                 <span className="note-card-row">
                   <span className="note-card-title">{note.title}</span>
                   {degree > 0 && (
-                    <span className="note-card-degree" title={`${degree} 条连接`}>
+                    <span className="note-card-degree" title={t('{count} 条连接', { count: degree })}>
                       <Link2 size={9} />
                       {degree}
                     </span>
                   )}
                 </span>
-                <span className="note-card-excerpt">{excerpt || '空白笔记，等待第一行字。'}</span>
+                <span className="note-card-excerpt">{excerpt || t('空白笔记，等待第一行字。')}</span>
                 <span className="note-card-meta">
                   <span>{timeAgo(note.updatedAt)}</span>
                   <span className="note-card-dot">·</span>
-                  <span>{countText(note.content).words} 字</span>
+                  <span>{t('{count} 字', { count: countText(note.content).words })}</span>
                 </span>
               </button>
             )
@@ -940,15 +957,15 @@ export function NotesModule() {
               <FileText size={18} />
               <p>
                 {notes.length === 0
-                  ? '还没有笔记。'
+                  ? t('还没有笔记。')
                   : query.trim()
-                    ? `没有匹配「${query.trim()}」的笔记。`
-                    : '还没有孤立笔记。'}
+                    ? t('没有匹配「{query}」的笔记。', { query: query.trim() })
+                    : t('还没有孤立笔记。')}
               </p>
               {notes.length === 0 ? (
                 <button type="button" className="btn btn-secondary btn-sm" onClick={createBlankNote}>
                   <Plus size={13} />
-                  新建笔记
+                  {t('新建笔记')}
                 </button>
               ) : (
                 <button
@@ -959,7 +976,7 @@ export function NotesModule() {
                     setFilter('all')
                   }}
                 >
-                  清除筛选
+                  {t('清除筛选')}
                 </button>
               )}
             </div>
@@ -974,9 +991,9 @@ export function NotesModule() {
             disabled={importing}
           >
             {importing ? <span className="spinner" style={{ width: 13, height: 13 }} /> : <FileUp size={14} />}
-            {importing ? '正在读取…' : '导入 Markdown'}
+            {importing ? t('正在读取…') : t('导入 Markdown')}
           </button>
-          <p>支持 .md / .txt · 只在本机解析与保存</p>
+          <p>{t('支持 .md / .txt · 只在本机解析与保存')}</p>
         </div>
       </aside>
 
@@ -989,7 +1006,7 @@ export function NotesModule() {
                   <span className="dot" />
                   <span>NOTE {pad2(Math.max(1, noteIndex + 1))}</span>
                   <span className="notes-eyebrow-sep">/</span>
-                  <span>更新于 {timeAgo(activeNote.updatedAt)}</span>
+                  <span>{t('更新于 {time}', { time: timeAgo(activeNote.updatedAt) })}</span>
                 </div>
                 <div className={cn('notes-title-wrap', !titleDraft && 'is-empty')}>
                   <input
@@ -997,8 +1014,8 @@ export function NotesModule() {
                     className="notes-title-input"
                     value={titleDraft}
                     maxLength={80}
-                    placeholder="未命名笔记"
-                    aria-label="笔记标题"
+                    placeholder={t('未命名笔记')}
+                    aria-label={t('笔记标题')}
                     onChange={(event) => setTitleDraft(event.target.value)}
                     onBlur={commitTitle}
                     onKeyDown={handleTitleKeyDown}
@@ -1008,18 +1025,18 @@ export function NotesModule() {
                 <div className="notes-head-meta">
                   <span>
                     <Link2 size={11} />
-                    {activeOutgoing.length} 条出链
+                    {t('{count} 条出链', { count: activeOutgoing.length })}
                   </span>
                   <span>
                     <CornerUpLeft size={11} />
-                    {activeBacklinks.length} 条反链
+                    {t('{count} 条反链', { count: activeBacklinks.length })}
                   </span>
-                  {activeDegree === 0 && <span className="notes-lonely">尚无连接</span>}
+                  {activeDegree === 0 && <span className="notes-lonely">{t('尚无连接')}</span>}
                 </div>
               </div>
 
               <div className="notes-head-actions">
-                <div className="segmented notes-mode" role="group" aria-label="显示模式">
+                <div className="segmented notes-mode" role="group" aria-label={t('显示模式')}>
                   {MODES.map((item) => {
                     const Icon = item.icon
                     return (
@@ -1031,11 +1048,11 @@ export function NotesModule() {
                           setMode(item.id)
                           setSuggest(null)
                         }}
-                        title={item.label}
+                        title={t(item.label)}
                         aria-pressed={mode === item.id}
                       >
                         <Icon size={13} />
-                        <span className="notes-mode-label">{item.label}</span>
+                        <span className="notes-mode-label">{t(item.label)}</span>
                       </button>
                     )
                   })}
@@ -1044,19 +1061,19 @@ export function NotesModule() {
                   type="button"
                   className="icon-btn notes-rail-toggle"
                   onClick={() => setRailOpen((open) => !open)}
-                  title="关联面板"
+                  title={t('关联面板')}
                   aria-expanded={railOpen}
                 >
                   <PanelRight size={16} />
                 </button>
                 <button type="button" className="btn btn-secondary btn-sm notes-ai-btn" onClick={askAboutNote}>
                   <Sparkles size={13} />
-                  <span>AI 梳理</span>
+                  <span>{t('AI 梳理')}</span>
                 </button>
-                <Dropdown className="icon-btn" title="更多操作" trigger={<MoreHorizontal size={16} />}>
+                <Dropdown className="icon-btn" title={t('更多操作')} trigger={<MoreHorizontal size={16} />}>
                   {(close) => (
                     <>
-                      <div className="menu-label">本机导出</div>
+                      <div className="menu-label">{t('本机导出')}</div>
                       <button
                         type="button"
                         className="menu-item"
@@ -1066,7 +1083,7 @@ export function NotesModule() {
                         }}
                       >
                         <Download size={14} />
-                        导出 Markdown
+                        {t('导出 Markdown')}
                       </button>
                       <button
                         type="button"
@@ -1077,7 +1094,7 @@ export function NotesModule() {
                         }}
                       >
                         <FileCode2 size={14} />
-                        导出 HTML
+                        {t('导出 HTML')}
                       </button>
                       <button
                         type="button"
@@ -1088,7 +1105,7 @@ export function NotesModule() {
                         }}
                       >
                         <Printer size={14} />
-                        打印 / 存为 PDF
+                        {t('打印 / 存为 PDF')}
                       </button>
                       <div className="menu-sep" />
                       <button
@@ -1100,7 +1117,7 @@ export function NotesModule() {
                         }}
                       >
                         <Trash2 size={14} />
-                        删除笔记
+                        {t('删除笔记')}
                       </button>
                     </>
                   )}
@@ -1110,11 +1127,11 @@ export function NotesModule() {
 
             <div className={cn('notes-stage', `mode-${mode}`)}>
               {mode !== 'read' && (
-                <div className="notes-toolbar" role="toolbar" aria-label="Markdown 格式">
+                <div className="notes-toolbar" role="toolbar" aria-label={t('Markdown 格式')}>
                   <button
                     type="button"
                     className="notes-tool notes-tool-text"
-                    title="一级标题"
+                    title={t('一级标题')}
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => applyLineStyle('h1')}
                   >
@@ -1123,7 +1140,7 @@ export function NotesModule() {
                   <button
                     type="button"
                     className="notes-tool notes-tool-text"
-                    title="二级标题"
+                    title={t('二级标题')}
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => applyLineStyle('h2')}
                   >
@@ -1133,27 +1150,27 @@ export function NotesModule() {
                   <button
                     type="button"
                     className="notes-tool"
-                    title="加粗（Ctrl+B）"
+                    title={t('加粗（Ctrl+B）')}
                     onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => wrapSelection('**', '**', '粗体')}
+                    onClick={() => wrapSelection('**', '**', t('粗体'))}
                   >
                     <Bold size={14} />
                   </button>
                   <button
                     type="button"
                     className="notes-tool"
-                    title="斜体（Ctrl+I）"
+                    title={t('斜体（Ctrl+I）')}
                     onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => wrapSelection('_', '_', '斜体')}
+                    onClick={() => wrapSelection('_', '_', t('斜体'))}
                   >
                     <Italic size={14} />
                   </button>
                   <button
                     type="button"
                     className="notes-tool"
-                    title="删除线"
+                    title={t('删除线')}
                     onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => wrapSelection('~~', '~~', '删除线')}
+                    onClick={() => wrapSelection('~~', '~~', t('删除线'))}
                   >
                     <Strikethrough size={14} />
                   </button>
@@ -1161,7 +1178,7 @@ export function NotesModule() {
                   <button
                     type="button"
                     className="notes-tool"
-                    title="无序列表"
+                    title={t('无序列表')}
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => applyLineStyle('bullet')}
                   >
@@ -1170,7 +1187,7 @@ export function NotesModule() {
                   <button
                     type="button"
                     className="notes-tool"
-                    title="任务清单"
+                    title={t('任务清单')}
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => applyLineStyle('task')}
                   >
@@ -1179,7 +1196,7 @@ export function NotesModule() {
                   <button
                     type="button"
                     className="notes-tool"
-                    title="引用"
+                    title={t('引用')}
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => applyLineStyle('quote')}
                   >
@@ -1188,7 +1205,7 @@ export function NotesModule() {
                   <button
                     type="button"
                     className="notes-tool"
-                    title="代码块"
+                    title={t('代码块')}
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={insertCodeBlock}
                   >
@@ -1198,7 +1215,7 @@ export function NotesModule() {
                   <button
                     type="button"
                     className="notes-tool"
-                    title="插入链接"
+                    title={t('插入链接')}
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={insertLinkSyntax}
                   >
@@ -1207,17 +1224,17 @@ export function NotesModule() {
                   <button
                     type="button"
                     className="notes-tool notes-tool-dual"
-                    title="插入双链（也可以直接输入 [[）"
+                    title={t('插入双链（也可以直接输入 [[）')}
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={startWikiLink}
                   >
                     <Network size={13} />
-                    双链
+                    {t('双链')}
                   </button>
                   <span className="notes-toolbar-spacer" />
                   <span className="notes-toolbar-hint">
                     <span className="notes-kbd">[[</span>
-                    搜索并连接笔记
+                    {t('搜索并连接笔记')}
                   </span>
                 </div>
               )}
@@ -1230,8 +1247,8 @@ export function NotesModule() {
                       className="notes-editor"
                       value={activeNote.content}
                       spellCheck={false}
-                      placeholder={'开始写点什么…\n\n输入 [[ 链接另一篇笔记，支持 Markdown 语法。'}
-                      aria-label="Markdown 编辑器"
+                      placeholder={t('开始写点什么…\n\n输入 [[ 链接另一篇笔记，支持 Markdown 语法。')}
+                      aria-label={t('Markdown 编辑器')}
                       onChange={handleEditorChange}
                       onKeyDown={handleEditorKeyDown}
                       onSelect={rememberSelection}
@@ -1239,12 +1256,13 @@ export function NotesModule() {
                       onBlur={() => window.setTimeout(() => setSuggest(null), 120)}
                     />
                     {suggest && (
-                      <div className="notes-suggest" role="listbox" aria-label="链接到笔记">
+                      <div className="notes-suggest" role="listbox" aria-label={t('链接到笔记')}>
                         <div className="notes-suggest-head">
-                          <span>链接到笔记</span>
+                          <span>{t('链接到笔记')}</span>
                           <span>
                             <span className="notes-kbd">↑</span>
-                            <span className="notes-kbd">↓</span> 选择 · <span className="notes-kbd">Enter</span> 插入
+                            <span className="notes-kbd">↓</span> {t('选择 ·')}{' '}
+                            <span className="notes-kbd">Enter</span> {t('插入')}
                           </span>
                         </div>
                         {suggestionItems.map((item, index) => (
@@ -1259,11 +1277,13 @@ export function NotesModule() {
                               {item.kind === 'note' ? <Link2 size={12} /> : <Plus size={12} />}
                             </span>
                             <span className="notes-suggest-title">{item.title}</span>
-                            <span className="notes-suggest-hint">{item.kind === 'note' ? '已有笔记' : '待创建'}</span>
+                            <span className="notes-suggest-hint">
+                              {item.kind === 'note' ? t('已有笔记') : t('待创建')}
+                            </span>
                           </button>
                         ))}
                         {suggestionItems.length === 0 && (
-                          <div className="notes-suggest-empty">没有其他笔记可链接，直接输入标题即可。</div>
+                          <div className="notes-suggest-empty">{t('没有其他笔记可链接，直接输入标题即可。')}</div>
                         )}
                       </div>
                     )}
@@ -1282,14 +1302,16 @@ export function NotesModule() {
                     ) : (
                       <div className="notes-preview-empty">
                         <span className="notes-empty-mark">¶</span>
-                        <p>这篇笔记还没有正文。</p>
+                        <p>{t('这篇笔记还没有正文。')}</p>
                         {mode === 'read' && (
                           <button type="button" className="btn btn-secondary btn-sm" onClick={() => setMode('split')}>
                             <PenLine size={13} />
-                            去编辑
+                            {t('去编辑')}
                           </button>
                         )}
-                        {mode === 'split' && <span className="notes-preview-hint">在左侧输入 Markdown，右侧会实时排版。</span>}
+                        {mode === 'split' && (
+                          <span className="notes-preview-hint">{t('在左侧输入 Markdown，右侧会实时排版。')}</span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1300,13 +1322,13 @@ export function NotesModule() {
             <footer className="notes-status">
               <span className="notes-status-item">
                 <span className="dot dot-green" />
-                Markdown · 自动保存到本机
+                {t('Markdown · 自动保存到本机')}
               </span>
               <span className="notes-status-spacer" />
-              <span>{stats.words} 字</span>
-              <span className="notes-status-chars">{stats.chars} 字符</span>
-              {stats.words > 0 && <span>约 {readingMinutes} 分钟</span>}
-              <span>{activeBacklinks.length} 条反链</span>
+              <span>{t('{count} 字', { count: stats.words })}</span>
+              <span className="notes-status-chars">{t('{count} 字符', { count: stats.chars })}</span>
+              {stats.words > 0 && <span>{t('约 {count} 分钟', { count: readingMinutes })}</span>}
+              <span>{t('{count} 条反链', { count: activeBacklinks.length })}</span>
             </footer>
           </>
         ) : (
@@ -1324,36 +1346,45 @@ export function NotesModule() {
                 <circle cx="148" cy="99" r="5" fill="#f7e7e0" stroke="#e4b9a7" />
               </svg>
               <span className="notes-empty-eyebrow">LOCAL FIRST · LINKED NOTES</span>
-              <h2>让笔记彼此认识。</h2>
+              <h2>{t('让笔记彼此认识。')}</h2>
               <p>
-                写下第一篇，或用 <code>[[双链]]</code> 连接已有的想法。反向链接、关系图谱与大纲都会自动生成，内容只留在本机。
+                {t('写下第一篇，或用 ')}
+                <code>[[{t('双链')}]]</code>
+                {t(' 连接已有的想法。反向链接、关系图谱与大纲都会自动生成，内容只留在本机。')}
               </p>
               <div className="notes-empty-actions">
                 <button type="button" className="btn btn-primary" onClick={createBlankNote}>
                   <Plus size={14} />
-                  新建笔记
+                  {t('新建笔记')}
                 </button>
                 <button type="button" className="btn btn-secondary" onClick={() => fileRef.current?.click()}>
                   <FileUp size={14} />
-                  导入 Markdown
+                  {t('导入 Markdown')}
                 </button>
               </div>
               <span className="notes-empty-sample">
-                <span className="notes-kbd">[[产品原则]]</span>
+                <span className="notes-kbd">[[{t('产品原则')}]]</span>
                 <ArrowUpRight size={11} />
-                <span className="notes-kbd">本地优先清单</span>
+                <span className="notes-kbd">{t('本地优先清单')}</span>
               </span>
             </div>
           </div>
         )}
       </section>
 
-      {railOpen && <button type="button" className="notes-rail-backdrop" aria-label="关闭关联面板" onClick={() => setRailOpen(false)} />}
+      {railOpen && (
+        <button
+          type="button"
+          className="notes-rail-backdrop"
+          aria-label={t('关闭关联面板')}
+          onClick={() => setRailOpen(false)}
+        />
+      )}
 
       {activeNote && (
-        <aside className="notes-rail" aria-label="笔记关联面板">
+        <aside className="notes-rail" aria-label={t('笔记关联面板')}>
           <div className="notes-rail-head">
-            <div className="notes-rail-tabs" role="tablist" aria-label="关联面板视图">
+            <div className="notes-rail-tabs" role="tablist" aria-label={t('关联面板视图')}>
               {RAIL_TABS.map((tab) => (
                 <button
                   key={tab.id}
@@ -1363,7 +1394,7 @@ export function NotesModule() {
                   className={cn('notes-rail-tab', railTab === tab.id && 'active')}
                   onClick={() => setRailTab(tab.id)}
                 >
-                  {tab.label}
+                  {t(tab.label)}
                   {tab.id === 'links' && activeBacklinks.length > 0 && <span>{activeBacklinks.length}</span>}
                 </button>
               ))}
@@ -1372,7 +1403,7 @@ export function NotesModule() {
               type="button"
               className="icon-btn icon-btn-sm notes-rail-close"
               onClick={() => setRailOpen(false)}
-              aria-label="关闭关联面板"
+              aria-label={t('关闭关联面板')}
             >
               <X size={14} />
             </button>
@@ -1384,7 +1415,7 @@ export function NotesModule() {
                 <section>
                   <div className="notes-rail-title">
                     <CornerUpLeft size={11} />
-                    链接到本篇
+                    {t('链接到本篇')}
                     <span className="notes-rail-count">{activeBacklinks.length}</span>
                   </div>
                   {activeBacklinks.map((backlink) => (
@@ -1399,16 +1430,18 @@ export function NotesModule() {
                         {backlink.count > 1 && <span className="notes-backlink-count">×{backlink.count}</span>}
                         <span className="notes-backlink-time">{timeAgo(backlink.updatedAt)}</span>
                       </span>
-                      <span className="notes-backlink-snippet">{backlink.snippet || '引用了这篇笔记。'}</span>
+                      <span className="notes-backlink-snippet">{backlink.snippet || t('引用了这篇笔记。')}</span>
                     </button>
                   ))}
-                  {activeBacklinks.length === 0 && <p className="notes-rail-empty">还没有其他笔记链接到这里。</p>}
+                  {activeBacklinks.length === 0 && (
+                    <p className="notes-rail-empty">{t('还没有其他笔记链接到这里。')}</p>
+                  )}
                 </section>
 
                 <section className="notes-rail-section">
                   <div className="notes-rail-title">
                     <ArrowUpRight size={11} />
-                    本篇链接到
+                    {t('本篇链接到')}
                     <span className="notes-rail-count">{activeOutgoing.length}</span>
                   </div>
                   {activeOutgoing.map((link) => (
@@ -1423,18 +1456,22 @@ export function NotesModule() {
                         {link.targetId ? <Link2 size={11} /> : <Plus size={11} />}
                       </span>
                       <span className="notes-outlink-name">{link.label}</span>
-                      {!link.targetId && <span className="notes-outlink-badge">待创建</span>}
+                      {!link.targetId && <span className="notes-outlink-badge">{t('待创建')}</span>}
                     </button>
                   ))}
                   {activeOutgoing.length === 0 && (
                     <p className="notes-rail-empty">
-                      还没有向外链接。在正文输入 <code>[[</code> 连接另一篇。
+                      {t('还没有向外链接。在正文输入 ')}
+                      <code>[[</code>
+                      {t(' 连接另一篇。')}
                     </p>
                   )}
                 </section>
 
                 <div className="notes-link-tip">
-                  双链是双向的：在任意笔记里写 <code>[[{activeNote.title}]]</code>，它就会出现在这里。
+                  {t('双链是双向的：在任意笔记里写 ')}
+                  <code>[[{activeNote.title}]]</code>
+                  {t('，它就会出现在这里。')}
                 </div>
               </>
             )}
@@ -1450,11 +1487,11 @@ export function NotesModule() {
                   />
                 </div>
                 <div className="notes-graph-meta">
-                  <span>{notes.length} 篇笔记</span>
-                  <span>{graphInfo.edgeCount} 条连线</span>
+                  <span>{t('{count} 篇笔记', { count: notes.length })}</span>
+                  <span>{t('{count} 条连线', { count: graphInfo.edgeCount })}</span>
                 </div>
-                <p className="notes-rail-note">点按节点切换笔记。红线聚焦当前笔记，孤立节点没有连线。</p>
-                {notes.length < 2 && <p className="notes-rail-empty">再写一篇，把它们连起来看看。</p>}
+                <p className="notes-rail-note">{t('点按节点切换笔记。红线聚焦当前笔记，孤立节点没有连线。')}</p>
+                {notes.length < 2 && <p className="notes-rail-empty">{t('再写一篇，把它们连起来看看。')}</p>}
               </>
             )}
 
@@ -1462,7 +1499,7 @@ export function NotesModule() {
               <>
                 <div className="notes-rail-title">
                   <ListTree size={11} />
-                  本篇大纲
+                  {t('本篇大纲')}
                   <span className="notes-rail-count">{outline.length}</span>
                 </div>
                 {outline.map((item, index) => (
@@ -1478,9 +1515,9 @@ export function NotesModule() {
                   </button>
                 ))}
                 {outline.length === 0 && (
-                  <p className="notes-rail-empty">还没有小标题。用 # 或 ## 组织内容，这里会自动生成大纲。</p>
+                  <p className="notes-rail-empty">{t('还没有小标题。用 # 或 ## 组织内容，这里会自动生成大纲。')}</p>
                 )}
-                <div className="notes-link-tip">点击标题可跳转到预览位置；编辑模式下会自动切到分栏。</div>
+                <div className="notes-link-tip">{t('点击标题可跳转到预览位置；编辑模式下会自动切到分栏。')}</div>
               </>
             )}
           </div>
@@ -1489,19 +1526,21 @@ export function NotesModule() {
 
       <ConfirmDialog
         open={deleteOpen}
-        title="删除这篇笔记？"
+        title={t('删除这篇笔记？')}
         description={
           activeNote ? (
             <>
-              将删除「{activeNote.title}」。其他笔记里指向它的双链会保留下来，显示为待创建，不会被自动清理。
+              {t('将删除「{title}」。其他笔记里指向它的双链会保留下来，显示为待创建，不会被自动清理。', {
+                title: activeNote.title,
+              })}
             </>
           ) : null
         }
-        confirmText="删除笔记"
+        confirmText={t('删除笔记')}
         onConfirm={() => {
           if (activeNote) {
             deleteFile('note', activeNote.id)
-            toast('笔记已删除', 'success')
+            toast(t('笔记已删除'), 'success')
           }
         }}
         onClose={() => setDeleteOpen(false)}

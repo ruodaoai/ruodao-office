@@ -1,5 +1,6 @@
 import type { DocSourceFile } from '../types'
 import { sanitizeDocHtml } from './markdown'
+import { t } from '../i18n'
 import {
   bytesToBase64,
   escapeHtml,
@@ -26,7 +27,7 @@ function plainTextToHtml(text: string): string {
 
 export async function importDocumentFile(file: File): Promise<ImportedDocument> {
   const lower = file.name.toLowerCase()
-  const title = file.name.replace(/\.[^.]+$/, '') || '导入的文档'
+  const title = file.name.replace(/\.[^.]+$/, '') || t('导入的文档')
   if (lower.endsWith('.docx')) {
     const mod: unknown = await import('mammoth/mammoth.browser.js')
     const mammoth = ((mod as { default?: unknown }).default ?? mod) as {
@@ -48,7 +49,7 @@ export async function importDocumentFile(file: File): Promise<ImportedDocument> 
       },
     )
     const html = sanitizeDocHtml(result.value)
-    if (!htmlToText(html) && !/<img/i.test(html)) throw new Error('这份 Word 文档没有可读取的内容')
+    if (!htmlToText(html) && !/<img/i.test(html)) throw new Error(t('这份 Word 文档没有可读取的内容'))
     return {
       title,
       html,
@@ -73,7 +74,7 @@ export async function importDocumentFile(file: File): Promise<ImportedDocument> 
     return { title, html: plainTextToHtml(await readFileAsText(file)), warnings: 0 }
   }
   if (lower.endsWith('.doc')) {
-    throw new Error('旧版 .doc 暂不支持，请在 Word / WPS 中另存为 .docx 后打开')
+    throw new Error(t('旧版 .doc 暂不支持，请在 Word / WPS 中另存为 .docx 后打开'))
   }
-  throw new Error('支持 .docx、.html、.txt 与 .md 文件')
+  throw new Error(t('支持 .docx、.html、.txt 与 .md 文件'))
 }

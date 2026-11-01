@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react'
 import type { AiContext, AiMessage } from '../../types'
+import { useT } from '../../i18n'
 import { contextBlock, localAnalyze, localSummaryMarkdown, presetOf, streamChat } from '../../lib/ai'
 import { getAiContext, insertAiText } from '../../lib/aiContext'
 import { renderMarkdown } from '../../lib/markdown'
@@ -90,6 +91,7 @@ export function AiDrawer() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const lastSeedRef = useRef<string | null>(null)
   const sendRef = useRef<(text?: string) => Promise<void>>(async () => {})
+  const t = useT()
 
   useEffect(() => {
     if (aiOpen) setCtxInfo(getAiContext(module))
@@ -111,13 +113,13 @@ export function AiDrawer() {
   const copyText = async (text: string, index?: number) => {
     try {
       await navigator.clipboard.writeText(text)
-      toast('已复制到剪贴板', 'success')
+      toast(t('已复制到剪贴板'), 'success')
       if (typeof index === 'number') {
         setCopiedIndex(index)
         window.setTimeout(() => setCopiedIndex(null), 1500)
       }
     } catch {
-      toast('复制失败，请手动选择文本', 'error')
+      toast(t('复制失败，请手动选择文本'), 'error')
     }
   }
 
@@ -128,10 +130,10 @@ export function AiDrawer() {
     }
     const ok = insertAiText(module, text)
     if (ok) {
-      toast('已插入到当前内容', 'success')
+      toast(t('已插入到当前内容'), 'success')
     } else {
       await copyText(text)
-      toast('当前没有可插入的位置，内容已复制', 'info')
+      toast(t('当前没有可插入的位置，内容已复制'), 'info')
     }
   }
 
@@ -140,7 +142,7 @@ export function AiDrawer() {
       const text = (override ?? input).trim()
       if (!text || loading) return
       if (!configured) {
-        toast('请先在设置中接入模型，或使用离线分析', 'error')
+        toast(t('请先在设置中接入模型，或使用离线分析'), 'error')
         return
       }
       const controller = new AbortController()
@@ -183,9 +185,9 @@ export function AiDrawer() {
             if (last && !last.content) return copy.slice(0, -1)
             return copy
           })
-          toast('已停止生成')
+          toast(t('已停止生成'))
         } else {
-          const message = (error as Error).message || '生成失败，请稍后重试'
+          const message = (error as Error).message || t('生成失败，请稍后重试')
           setMessages((previous) => {
             const copy = [...previous]
             const last = copy[copy.length - 1]
@@ -202,7 +204,7 @@ export function AiDrawer() {
         abortRef.current = null
       }
     },
-    [configured, includeContext, input, loading, messages, module, settings, toast],
+    [configured, includeContext, input, loading, messages, module, settings, t, toast],
   )
 
   useEffect(() => {
@@ -222,7 +224,7 @@ export function AiDrawer() {
   const runLocal = (mode: 'summary' | 'keywords') => {
     const context = getAiContext(module)
     if (!context || !context.text.trim()) {
-      toast('当前没有可分析的文本', 'error')
+      toast(t('当前没有可分析的文本'), 'error')
       return
     }
     setCtxInfo(context)
@@ -230,10 +232,15 @@ export function AiDrawer() {
     const content =
       mode === 'summary'
         ? localSummaryMarkdown(insight)
-        : `**关键词 · 本地计算**（未使用模型）\n\n${insight.keywords.join('、') || '没有提取到明显关键词。'}`
+        : t('**关键词 · 本地计算**（未使用模型）\n\n{keywords}', {
+            keywords: insight.keywords.join('、') || t('没有提取到明显关键词。'),
+          })
     setMessages((previous) => [
       ...previous,
-      { role: 'user', content: mode === 'summary' ? '离线摘要当前内容' : '提取当前内容的关键词' },
+      {
+        role: 'user',
+        content: mode === 'summary' ? t('离线摘要当前内容') : t('提取当前内容的关键词'),
+      },
       { role: 'assistant', content, local: true },
     ])
   }
@@ -255,20 +262,26 @@ export function AiDrawer() {
   })()
 
   return (
-    <aside className={cn('ai-panel', aiOpen && 'open')} aria-hidden={!aiOpen} aria-label="AI 助手">
+    <aside className={cn('ai-panel', aiOpen && 'open')} aria-hidden={!aiOpen} aria-label={t('AI 助手')}>
       <header className="ai-head">
         <div className="ai-head-brand">
           <span className="ai-mark">AI</span>
           <div className="ai-head-text">
-            <strong>若道 AI</strong>
-            <span>{configured ? `${provider?.name ?? '自定义'} · ${settings.model}` : settings.provider === 'ruodao' ? '若道云端 · 等待登录' : '未配置模型 · 离线分析可用'}</span>
+            <strong>{t('若道 AI')}</strong>
+            <span>
+              {configured
+                ? `${t(provider?.name ?? '自定义')} · ${settings.model}`
+                : settings.provider === 'ruodao'
+                  ? t('若道云端 · 等待登录')
+                  : t('未配置模型 · 离线分析可用')}
+            </span>
           </div>
         </div>
         <div className="ai-head-actions">
           <button
             type="button"
             className="icon-btn icon-btn-sm"
-            title="AI 任务窗口"
+            title={t('AI 任务窗口')}
             onClick={() => {
               openAiTask()
               setAiOpen(false)
@@ -277,14 +290,29 @@ export function AiDrawer() {
             <Wand2 size={14} />
           </button>
           {messages.length > 0 && (
-            <button type="button" className="icon-btn icon-btn-sm" title="清空对话" onClick={() => setMessages([])}>
+            <button
+              type="button"
+              className="icon-btn icon-btn-sm"
+              title={t('清空对话')}
+              onClick={() => setMessages([])}
+            >
               <Trash2 size={14} />
             </button>
           )}
-          <button type="button" className="icon-btn icon-btn-sm" title="模型设置" onClick={() => openSettings('ai')}>
+          <button
+            type="button"
+            className="icon-btn icon-btn-sm"
+            title={t('模型设置')}
+            onClick={() => openSettings('ai')}
+          >
             <Settings2 size={14} />
           </button>
-          <button type="button" className="icon-btn icon-btn-sm" title="关闭" onClick={() => setAiOpen(false)}>
+          <button
+            type="button"
+            className="icon-btn icon-btn-sm"
+            title={t('关闭')}
+            onClick={() => setAiOpen(false)}
+          >
             <X size={15} />
           </button>
         </div>
@@ -293,9 +321,13 @@ export function AiDrawer() {
       {!configured && (
         <div className="ai-config-banner">
           <ScanText size={13} />
-          <span>{settings.provider === 'ruodao' && !signedIn ? '登录若道账户即可调用云端模型；离线摘要始终可用。' : '未接入模型。离线摘要可直接使用，对话与润色需先配置服务。'}</span>
+          <span>
+            {settings.provider === 'ruodao' && !signedIn
+              ? t('登录若道账户即可调用云端模型；离线摘要始终可用。')
+              : t('未接入模型。离线摘要可直接使用，对话与润色需先配置服务。')}
+          </span>
           <button type="button" onClick={() => openSettings('ai')}>
-            配置
+            {t('配置')}
           </button>
         </div>
       )}
@@ -307,9 +339,11 @@ export function AiDrawer() {
               <span className="dot" />
               LOCAL-FIRST AI
             </div>
-            <h2>让 AI 帮你处理这份内容。</h2>
+            <h2>{t('让 AI 帮你处理这份内容。')}</h2>
             <p>
-              读取当前文档、选中的表格区域或笔记，生成摘要、润色与续写。内容只会发送到你选择的模型服务。
+              {t(
+                '读取当前文档、选中的表格区域或笔记，生成摘要、润色与续写。内容只会发送到你选择的模型服务。',
+              )}
             </p>
 
             <div className="ai-prompt-grid">
@@ -320,8 +354,8 @@ export function AiDrawer() {
                     <span className="ai-prompt-icon">
                       <Icon size={14} />
                     </span>
-                    <span className="ai-prompt-title">{item.title}</span>
-                    <span className="ai-prompt-hint">{item.hint}</span>
+                    <span className="ai-prompt-title">{t(item.title)}</span>
+                    <span className="ai-prompt-hint">{t(item.hint)}</span>
                   </button>
                 )
               })}
@@ -330,16 +364,16 @@ export function AiDrawer() {
             <div className="ai-offline">
               <div className="ai-offline-head">
                 <Lock size={12} />
-                本机离线能力
-                <span className="badge">不用模型</span>
+                {t('本机离线能力')}
+                <span className="badge">{t('不用模型')}</span>
               </div>
-              <p>在设备上直接计算，不上传任何字符。</p>
+              <p>{t('在设备上直接计算，不上传任何字符。')}</p>
               <div className="ai-offline-actions">
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => runLocal('summary')}>
-                  离线摘要
+                  {t('离线摘要')}
                 </button>
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => runLocal('keywords')}>
-                  提取关键词
+                  {t('提取关键词')}
                 </button>
               </div>
             </div>
@@ -347,15 +381,18 @@ export function AiDrawer() {
             <div className="ai-welcome-foot">
               <span className={cn('dot', ctxInfo ? 'dot-green' : 'dot-muted')} />
               {ctxInfo
-                ? `已连接：${KIND_LABEL[ctxInfo.kind]}《${ctxInfo.title}》`
-                : '打开一份文档或笔记，即可让 AI 读取当前内容'}
+                ? t('已连接：{kind}《{title}》', {
+                    kind: t(KIND_LABEL[ctxInfo.kind]),
+                    title: ctxInfo.title,
+                  })
+                : t('打开一份文档或笔记，即可让 AI 读取当前内容')}
             </div>
           </div>
         ) : (
           <div className="ai-messages">
             {messages.map((message, index) => (
               <div key={index} className={cn('ai-msg', message.role)}>
-                {message.role === 'assistant' && <span className="ai-msg-avatar">若</span>}
+                {message.role === 'assistant' && <span className="ai-msg-avatar">{t('若')}</span>}
                 <div className="ai-msg-body">
                   {message.role === 'user' ? (
                     <div className="ai-user-text">{message.content}</div>
@@ -375,25 +412,25 @@ export function AiDrawer() {
                     <div className="ai-msg-actions">
                       <button type="button" onClick={() => copyText(message.content, index)}>
                         <Copy size={11} />
-                        {copiedIndex === index ? '已复制' : '复制'}
+                        {copiedIndex === index ? t('已复制') : t('复制')}
                       </button>
                       {(module === 'docs' || module === 'notes' || module === 'sheets') && (
                         <button type="button" onClick={() => void insert(message.content)}>
                           <CornerDownLeft size={11} />
-                          {module === 'sheets' ? '填入表格' : '插入'}
+                          {module === 'sheets' ? t('填入表格') : t('插入')}
                         </button>
                       )}
-                      {message.local && <span className="ai-local-label">本机计算</span>}
+                      {message.local && <span className="ai-local-label">{t('本机计算')}</span>}
                       {index === lastAssistantIndex && !loading && (
                         <button type="button" onClick={() => void send(messages[lastAssistantIndex - 1]?.content ?? '请继续')}>
                           <ArrowUp size={11} />
-                          重试
+                          {t('重试')}
                         </button>
                       )}
                     </div>
                   )}
                   {message.role === 'assistant' && message.local && !message.content && (
-                    <div className="ai-local-label">本机计算</div>
+                    <div className="ai-local-label">{t('本机计算')}</div>
                   )}
                 </div>
               </div>
@@ -407,12 +444,17 @@ export function AiDrawer() {
           <div className="ai-quick-row">
             {QUICK.map((item) => (
               <button key={item.label} type="button" className="ai-quick-chip" onClick={() => quickRun(item.prompt)}>
-                {item.label}
+                {t(item.label)}
               </button>
             ))}
             <span className="spacer" />
-            <button type="button" className="ai-quick-chip muted" onClick={() => runLocal('summary')} title="本机计算，不调用模型">
-              离线摘要
+            <button
+              type="button"
+              className="ai-quick-chip muted"
+              onClick={() => runLocal('summary')}
+              title={t('本机计算，不调用模型')}
+            >
+              {t('离线摘要')}
             </button>
           </div>
         )}
@@ -427,10 +469,14 @@ export function AiDrawer() {
                 if (event.target.checked) setCtxInfo(getAiContext(module))
               }}
             />
-            引用当前内容
+            {t('引用当前内容')}
           </label>
           <span className="ai-context-name">
-            {includeContext ? (ctxInfo ? `${KIND_LABEL[ctxInfo.kind]} · ${ctxInfo.title}` : '当前无内容') : '不附带上下文'}
+            {includeContext
+              ? ctxInfo
+                ? `${t(KIND_LABEL[ctxInfo.kind])} · ${ctxInfo.title}`
+                : t('当前无内容')
+              : t('不附带上下文')}
           </span>
           <button
             type="button"
@@ -438,11 +484,11 @@ export function AiDrawer() {
             onClick={() => {
               const next = getAiContext(module)
               setCtxInfo(next)
-              if (!next) toast('当前模块没有可读取的内容', 'info')
+              if (!next) toast(t('当前模块没有可读取的内容'), 'info')
             }}
-            title="重新读取当前内容"
+            title={t('重新读取当前内容')}
           >
-            刷新
+            {t('刷新')}
           </button>
         </div>
 
@@ -451,7 +497,13 @@ export function AiDrawer() {
             ref={textareaRef}
             rows={1}
             value={input}
-            placeholder={configured ? '问点什么，或让 AI 处理当前内容…' : settings.provider === 'ruodao' && !signedIn ? '登录若道账户后开始对话；也可以使用离线摘要' : '配置模型后开始对话；也可以使用离线摘要'}
+            placeholder={
+              configured
+                ? t('问点什么，或让 AI 处理当前内容…')
+                : settings.provider === 'ruodao' && !signedIn
+                  ? t('登录若道账户后开始对话；也可以使用离线摘要')
+                  : t('配置模型后开始对话；也可以使用离线摘要')
+            }
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -461,20 +513,33 @@ export function AiDrawer() {
             }}
           />
           {loading ? (
-            <button type="button" className="ai-send-btn stop" onClick={() => abortRef.current?.abort()} title="停止生成">
+            <button
+              type="button"
+              className="ai-send-btn stop"
+              onClick={() => abortRef.current?.abort()}
+              title={t('停止生成')}
+            >
               <Square size={12} fill="currentColor" />
             </button>
           ) : (
-            <button type="button" className="ai-send-btn" onClick={() => void send()} disabled={!input.trim()} title="发送">
+            <button
+              type="button"
+              className="ai-send-btn"
+              onClick={() => void send()}
+              disabled={!input.trim()}
+              title={t('发送')}
+            >
               <ArrowUp size={15} />
             </button>
           )}
         </div>
         <div className="ai-footnote">
           <Lock size={9} />
-          {settings.provider === 'ruodao' ? '内容经若道云端模型处理' : '内容只发送到你配置的模型服务'}
+          {settings.provider === 'ruodao'
+            ? t('内容经若道云端模型处理')
+            : t('内容只发送到你配置的模型服务')}
           <span className="spacer" />
-          <span>Enter 发送 · Shift+Enter 换行</span>
+          <span>{t('Enter 发送 · Shift+Enter 换行')}</span>
         </div>
       </div>
     </aside>

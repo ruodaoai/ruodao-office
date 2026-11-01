@@ -3,6 +3,7 @@ import { FilePlus2, FileSpreadsheet, FileUp, Plus, Search, Table2, X } from 'luc
 import type { SheetRecord } from '../../types'
 import { importSheetFile } from '../../lib/openFiles'
 import { cn, timeAgo } from '../../lib/utils'
+import { useT } from '../../i18n'
 import { useLibrary } from '../../store/library'
 import { useUI } from '../../store/ui'
 import { SheetWorkbook } from './SheetWorkbook'
@@ -34,6 +35,7 @@ function sheetCellCount(sheet: SheetRecord): number {
 }
 
 export function SheetsModule() {
+  const t = useT()
   const sheets = useLibrary((s) => s.sheets)
   const activeSheetId = useLibrary((s) => s.activeSheetId)
   const setActive = useLibrary((s) => s.setActive)
@@ -61,17 +63,17 @@ export function SheetsModule() {
   const handleNew = () => {
     createSheet()
     setQuery('')
-    toast('已新建空白工作表', 'success')
+    toast(t('已新建空白工作表'), 'success')
   }
 
   const importFile = async (file: File) => {
     const lower = file.name.toLowerCase()
     if (!/\.(xlsx|xls|csv)$/.test(lower)) {
-      toast('支持 .xlsx、.xls 与 .csv 文件', 'error')
+      toast(t('支持 .xlsx、.xls 与 .csv 文件'), 'error')
       return
     }
     if (file.size > 30 * 1024 * 1024) {
-      toast('文件不能超过 30MB', 'error')
+      toast(t('文件不能超过 30MB'), 'error')
       return
     }
     setImporting(true)
@@ -80,14 +82,14 @@ export function SheetsModule() {
       setQuery('')
       toast(
         info.reused
-          ? `《${info.title}》已经打开过，已切换到已有表格`
+          ? t('《{title}》已经打开过，已切换到已有表格', { title: info.title })
           : info.tabs > 1
-            ? `已导入 ${info.tabs} 个工作表`
-            : '表格已导入',
+            ? t('已导入 {n} 个工作表', { n: info.tabs })
+            : t('表格已导入'),
         info.reused ? 'info' : 'success',
       )
     } catch (error) {
-      toast((error as Error).message || '导入失败，请检查文件', 'error')
+      toast((error as Error).message || t('导入失败，请检查文件'), 'error')
     } finally {
       setImporting(false)
       if (fileRef.current) fileRef.current.value = ''
@@ -99,10 +101,10 @@ export function SheetsModule() {
       <aside className="sheets-sidebar">
         <div className="sheets-side-head">
           <div className="sheets-side-title-wrap">
-            <h1 className="sheets-side-title">表格</h1>
+            <h1 className="sheets-side-title">{t('表格')}</h1>
             <span className="sheets-side-count">{sheets.length}</span>
           </div>
-          <button type="button" className="icon-btn" onClick={handleNew} title="新建表格" aria-label="新建表格">
+          <button type="button" className="icon-btn" onClick={handleNew} title={t('新建表格')} aria-label={t('新建表格')}>
             <Plus size={16} />
           </button>
         </div>
@@ -112,11 +114,11 @@ export function SheetsModule() {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="搜索标题或单元格"
-            aria-label="搜索表格"
+            placeholder={t('搜索标题或单元格')}
+            aria-label={t('搜索表格')}
           />
           {query && (
-            <button type="button" className="sheets-search-clear" onClick={() => setQuery('')} aria-label="清除搜索">
+            <button type="button" className="sheets-search-clear" onClick={() => setQuery('')} aria-label={t('清除搜索')}>
               <X size={12} />
             </button>
           )}
@@ -139,10 +141,10 @@ export function SheetsModule() {
                 <span className="sheet-file-title">{sheet.title}</span>
                 <span className="sheet-file-time tabular">{timeAgo(sheet.updatedAt)}</span>
                 <span className="sheet-file-sub">
-                  {preview || '空白工作表，等待第一行数字。'}
+                  {preview || t('空白工作表，等待第一行数字。')}
                 </span>
                 <span className="sheet-file-meta">
-                  {sheet.tabs.length} 表 · {sheetCellCount(sheet)} 格
+                  {t('{tabs} 表 · {cells} 格', { tabs: sheet.tabs.length, cells: sheetCellCount(sheet) })}
                 </span>
               </button>
             )
@@ -150,10 +152,10 @@ export function SheetsModule() {
           {filtered.length === 0 && (
             <div className="sheets-list-empty">
               <Table2 size={18} />
-              <p>{sheets.length === 0 ? '还没有表格。' : `没有匹配「${query.trim()}」的表格。`}</p>
+              <p>{sheets.length === 0 ? t('还没有表格。') : t('没有匹配「{query}」的表格。', { query: query.trim() })}</p>
               <button type="button" className="btn btn-secondary btn-sm" onClick={handleNew}>
                 <FilePlus2 size={13} />
-                新建表格
+                {t('新建表格')}
               </button>
             </div>
           )}
@@ -167,9 +169,9 @@ export function SheetsModule() {
             disabled={importing}
           >
             {importing ? <span className="spinner" style={{ width: 13, height: 13 }} /> : <FileUp size={14} />}
-            {importing ? '正在解析…' : '导入 Excel / CSV'}
+            {importing ? t('正在解析…') : t('导入 Excel / CSV')}
           </button>
-          <p>公式、列宽与数字格式尽量原样还原。</p>
+          <p>{t('公式、列宽与数字格式尽量原样还原。')}</p>
         </div>
       </aside>
 
@@ -184,17 +186,17 @@ export function SheetsModule() {
                   <span key={index} />
                 ))}
               </div>
-              <span className="sheets-blank-mark">表</span>
-              <h2>让数字先排成行列。</h2>
-              <p>公式、格式与多工作表都在本机计算。也可以导入现有的 Excel 文件继续处理。</p>
+              <span className="sheets-blank-mark">{t('表')}</span>
+              <h2>{t('让数字先排成行列。')}</h2>
+              <p>{t('公式、格式与多工作表都在本机计算。也可以导入现有的 Excel 文件继续处理。')}</p>
               <div className="sheets-blank-actions">
                 <button type="button" className="btn btn-primary" onClick={handleNew}>
                   <Plus size={14} />
-                  新建表格
+                  {t('新建表格')}
                 </button>
                 <button type="button" className="btn btn-secondary" onClick={() => fileRef.current?.click()}>
                   <FileUp size={14} />
-                  导入 Excel
+                  {t('导入 Excel')}
                 </button>
               </div>
             </div>

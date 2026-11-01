@@ -4,9 +4,11 @@ import { useAuth, displayNameOf, initialsOf } from '../store/auth'
 import { useSettings } from '../lib/settings'
 import { useUI } from '../store/ui'
 import { cn } from '../lib/utils'
+import { useT } from '../i18n'
 import { Modal } from './ui'
 
 export function AccountDialog() {
+  const t = useT()
   const open = useUI((s) => s.accountOpen)
   const setOpen = useUI((s) => s.setAccountOpen)
   const toast = useUI((s) => s.toast)
@@ -59,12 +61,12 @@ export function AccountDialog() {
       setPassword('')
       toast(
         list.length
-          ? `已登录若道 · 云端 AI 可用（${list.length} 个模型）`
-          : '已登录若道账户',
+          ? t('已登录若道 · 云端 AI 可用（{n} 个模型）', { n: list.length })
+          : t('已登录若道账户'),
         'success',
       )
     } catch (reason) {
-      setError((reason as Error).message || '登录失败')
+      setError((reason as Error).message || t('登录失败'))
     } finally {
       setBusy(false)
     }
@@ -72,19 +74,26 @@ export function AccountDialog() {
 
   const doLogout = async () => {
     await logout()
-    toast('已退出若道账户', 'info')
+    toast(t('已退出若道账户'), 'info')
   }
 
   return (
     <Modal
       open={open}
       onClose={() => setOpen(false)}
-      title={session ? '若道账户' : '登录若道'}
-      description={session ? '云端模型使用此账户的若道额度。' : '使用若道账户登录后，可直接调用云端模型。'}
+      title={session ? t('若道账户') : t('登录若道')}
+      description={
+        session ? t('云端模型使用此账户的若道额度。') : t('使用若道账户登录后，可直接调用云端模型。')
+      }
       width={480}
       className="account-modal"
     >
-      {status === 'loading' && <div className="account-loading"><span className="spinner" />正在读取账户…</div>}
+      {status === 'loading' && (
+        <div className="account-loading">
+          <span className="spinner" />
+          {t('正在读取账户…')}
+        </div>
+      )}
 
       {status !== 'loading' && session && (
         <div className="account-panel">
@@ -98,18 +107,18 @@ export function AccountDialog() {
               <strong>{displayNameOf(session.user)}</strong>
               <span>{session.user.email}</span>
             </div>
-            <span className="account-badge">已登录</span>
+            <span className="account-badge">{t('已登录')}</span>
           </div>
 
           <div className="account-cloud-row">
             <div className="account-cloud-head">
               <Cloud size={14} />
-              <span>云端模型</span>
+              <span>{t('云端模型')}</span>
               <button
                 type="button"
                 className="account-refresh"
-                title="刷新模型列表"
-                aria-label="刷新模型列表"
+                title={t('刷新模型列表')}
+                aria-label={t('刷新模型列表')}
                 onClick={() => void loadModels().catch(() => undefined)}
                 disabled={modelsLoading}
               >
@@ -120,20 +129,23 @@ export function AccountDialog() {
               {modelsError
                 ? modelsError
                 : modelsLoading
-                  ? '正在读取可用模型…'
+                  ? t('正在读取可用模型…')
                   : models.length
-                    ? `${models.length} 个模型可用${ai.provider === 'ruodao' ? ` · 当前 ${ai.model || '未选择'}` : ' · 可在 AI 设置中切换'}`
-                    : '账户暂未开通云端模型'}
+                    ? t('{n} 个模型可用', { n: models.length }) +
+                      (ai.provider === 'ruodao'
+                        ? t(' · 当前 {model}', { model: ai.model || t('未选择') })
+                        : t(' · 可在 AI 设置中切换'))
+                    : t('账户暂未开通云端模型')}
             </p>
           </div>
 
           <dl className="account-meta">
             <div>
-              <dt>服务地址</dt>
+              <dt>{t('服务地址')}</dt>
               <dd>{session.baseUrl}</dd>
             </div>
             <div>
-              <dt>账户 ID</dt>
+              <dt>{t('账户 ID')}</dt>
               <dd>{session.user.id}</dd>
             </div>
           </dl>
@@ -141,16 +153,16 @@ export function AccountDialog() {
           <div className="account-actions">
             <button type="button" className="btn btn-secondary" onClick={() => void doLogout()}>
               <LogOut size={14} />
-              退出登录
+              {t('退出登录')}
             </button>
             <button type="button" className="btn btn-primary" onClick={() => setOpen(false)}>
-              完成
+              {t('完成')}
             </button>
           </div>
 
           <p className="account-note">
             <ShieldCheck size={12} />
-            登录令牌仅保存在此设备的浏览器存储中，不会写入本地备份或上传到其他服务。
+            {t('登录令牌仅保存在此设备的浏览器存储中，不会写入本地备份或上传到其他服务。')}
           </p>
         </div>
       )}
@@ -158,7 +170,7 @@ export function AccountDialog() {
       {status !== 'loading' && !session && (
         <form className="account-panel" onSubmit={submit}>
           <label className="field">
-            <span className="field-label">邮箱</span>
+            <span className="field-label">{t('邮箱')}</span>
             <input
               className="input"
               type="email"
@@ -170,7 +182,7 @@ export function AccountDialog() {
             />
           </label>
           <label className="field">
-            <span className="field-label">密码</span>
+            <span className="field-label">{t('密码')}</span>
             <input
               className="input"
               type="password"
@@ -178,16 +190,16 @@ export function AccountDialog() {
               autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="若道账户密码"
+              placeholder={t('若道账户密码')}
             />
           </label>
 
           <button type="button" className="account-advanced-toggle" onClick={() => setAdvanced((v) => !v)}>
-            {advanced ? '收起服务地址' : '服务地址（本地开发 / 私有部署）'}
+            {advanced ? t('收起服务地址') : t('服务地址（本地开发 / 私有部署）')}
           </button>
           {advanced && (
             <label className="field">
-              <span className="field-label">地址</span>
+              <span className="field-label">{t('地址')}</span>
               <input
                 className="input"
                 value={serviceUrl}
@@ -206,16 +218,16 @@ export function AccountDialog() {
               target="_blank"
               rel="noreferrer"
             >
-              在若道注册
+              {t('在若道注册')}
             </a>
             <button type="submit" className="btn btn-primary" disabled={busy || !email.trim() || !password}>
               {busy ? <span className="spinner" /> : <LogIn size={14} />}
-              {busy ? '正在登录…' : '登录'}
+              {busy ? t('正在登录…') : t('登录')}
             </button>
           </div>
           <p className="account-note">
             <ShieldCheck size={12} />
-            令牌只保存在此设备。若道不会收到你本地文档的内容，除非你主动让 AI 读取。
+            {t('令牌只保存在此设备。若道不会收到你本地文档的内容，除非你主动让 AI 读取。')}
           </p>
         </form>
       )}

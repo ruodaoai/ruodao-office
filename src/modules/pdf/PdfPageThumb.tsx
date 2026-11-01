@@ -3,6 +3,7 @@ import type { RefObject } from 'react'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import type { RenderTask } from 'pdfjs-dist'
 import { Check } from 'lucide-react'
+import { useT } from '../../i18n'
 
 interface PdfPageThumbProps {
   doc: PDFDocumentProxy
@@ -13,6 +14,7 @@ interface PdfPageThumbProps {
 }
 
 export function PdfPageThumb({ doc, pageNumber, selected, onToggle, rootRef }: PdfPageThumbProps) {
+  const t = useT()
   const hostRef = useRef<HTMLButtonElement>(null)
   const [aspect, setAspect] = useState(1 / 1.414)
   const [src, setSrc] = useState<string | null>(null)
@@ -78,7 +80,11 @@ export function PdfPageThumb({ doc, pageNumber, selected, onToggle, rootRef }: P
       type="button"
       className={`pdf-page${selected ? ' selected' : ''}`}
       aria-pressed={selected}
-      aria-label={`第 ${pageNumber} 页${selected ? '，已选择' : ''}`}
+      aria-label={
+        selected
+          ? t('第 {page} 页，已选择', { page: pageNumber })
+          : t('第 {page} 页', { page: pageNumber })
+      }
       onClick={(event) =>
         onToggle(pageNumber, {
           shiftKey: event.shiftKey,
@@ -89,7 +95,7 @@ export function PdfPageThumb({ doc, pageNumber, selected, onToggle, rootRef }: P
     >
       <span className="pdf-page-sheet" style={{ aspectRatio: `${aspect}` }}>
         {src ? <img src={src} alt="" draggable={false} /> : <span className="pdf-page-skeleton" aria-hidden />}
-        {failed ? <span className="pdf-page-failed">无法预览</span> : null}
+        {failed ? <span className="pdf-page-failed">{t('无法预览')}</span> : null}
         <span className="pdf-page-num">{pageNumber}</span>
         {selected ? (
           <span className="pdf-page-check" aria-hidden>

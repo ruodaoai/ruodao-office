@@ -14,6 +14,8 @@
 [![Electron](https://img.shields.io/badge/Electron-45-c8442b)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18%20%2B%20TypeScript-c8442b)](https://react.dev/)
 
+**简体中文** · [English](README.en.md)
+
 [⬇️ 下载安装包](https://github.com/ruodaoai/ruodao-office/releases/latest) · [功能一览](#功能一览) · [界面速览](#界面速览) · [使用教程](#使用教程) · [常见问题](#常见问题)
 
 </div>
@@ -31,6 +33,7 @@
 | 文件属于你 | 本地数据库 + JSON 整包备份，无云端依赖，断网可用 |
 | 开源免费 | 全部功能开放，不收订阅费、授权费，导 PDF 不再二次收费 |
 | AI 可控 | 自带 API Key 或本机 Ollama，内容只发往你指定的服务 |
+| 中英双语 | 完整简体中文 / English 界面，运行时切换，无需重启 |
 
 ## 功能一览
 
@@ -42,6 +45,7 @@
 | 🧠 **双链笔记** | Markdown 编辑、`[[双向链接]]`、反向链接、分栏阅读、关系图谱 |
 | 🔄 **格式转换** | 20 种输入 × 30 种输出，图片 / PDF / 文档 / 表格 / 压缩包批量互转，全程本机 |
 | ✨ **AI 助手** | 接 DeepSeek / 任意 OpenAI 兼容接口 / 本机 Ollama；摘要、改写、翻译、续写、提取要点 |
+| 🌐 **中英双语** | 界面完整支持简体中文与 English，设置里一键切换，跟随系统语言 |
 | 👥 **多人协作** | 基于 Yjs 的实时协同，自建 WebSocket 服务即可，不经过第三方服务器 |
 
 ## 界面速览
@@ -87,6 +91,12 @@
 接入自己的 Key 或本机模型；没配模型时，离线摘要依然可用。
 
 ![AI 助手](screenshots/07-ai-assistant.png)
+
+### 设置：一键切换中文 / English
+
+界面语言在「设置 → 通用」里切换，立即生效；新安装默认跟随系统语言。英文界面截图见 [`screenshots/en/`](screenshots/en)。
+
+![设置](screenshots/08-settings.png)
 
 ## 下载与安装
 
@@ -208,7 +218,11 @@ COLLAB_PORT=9000 npm run collab   # 换端口
 
 然后在应用内打开「协作」面板，填入服务地址（如 `ws://127.0.0.1:1234`）与昵称，创建或加入房间即可实时同步；同一房间内可看到彼此光标。
 
-### 8. 备份与换机
+### 8. 切换界面语言
+
+**设置 → 通用 → 界面语言**：选择「简体中文」或「English」，切换后立即生效，无需重启。首次安装默认跟随系统语言，选择结果按设备记住。
+
+### 9. 备份与换机
 
 **设置 → 数据 → 备份与迁移**：
 
@@ -247,6 +261,7 @@ COLLAB_PORT=9000 npm run collab   # 换端口
 | PDF | `pdf-lib` · `pdfjs-dist` · `tesseract.js`（OCR） |
 | 笔记 | `marked` · `dompurify` · 双链索引 |
 | 协作 | `yjs` + `ws`（自建房间服务） |
+| 多语言 | 以中文原文为 key 的类型化词典，zh-CN / en，运行时切换 |
 | 本地存储 | `idb-keyval` |
 
 ## 目录结构
@@ -260,6 +275,7 @@ ruodao-office/
 │   ├── lib/             # 文档模型、公式引擎、xlsx、pdf、markdown、AI、存储
 │   ├── store/           # Zustand 状态（资料库 / UI / 账号 / 协作）
 │   └── styles/          # 分模块样式
+│   ├── i18n/            # 语言状态 + 英文词典（中文为源语言）
 ├── server/collab.mjs    # 协作服务（Yjs + WebSocket）
 ├── scripts/             # 开发启动器、图标生成、打包、截图脚本
 ├── screenshots/         # README 截图

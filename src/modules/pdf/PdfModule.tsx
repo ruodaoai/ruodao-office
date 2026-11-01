@@ -60,6 +60,7 @@ import {
 import { NOTE_TONE_COLORS, noteDataUrl, type NoteTone } from '../../lib/pdfArt'
 import { cn, downloadBlob, downloadBytes, downloadText, safeFilename, uid } from '../../lib/utils'
 import { openFiles } from '../../lib/openFiles'
+import { useT } from '../../i18n'
 import { useUI } from '../../store/ui'
 import { PdfPageThumb } from './PdfPageThumb'
 import { SignatureStudio, type SignatureScope } from './SignatureStudio'
@@ -127,6 +128,7 @@ async function zipBytes(entries: Array<{ name: string; bytes: Uint8Array }>): Pr
 }
 
 export function PdfModule() {
+  const t = useT()
   const toast = useUI((s) => s.toast)
   const openAiTask = useUI((s) => s.openAiTask)
 
@@ -141,7 +143,7 @@ export function PdfModule() {
   const [dragOver, setDragOver] = useState(false)
 
   const [wm, setWm] = useState<WatermarkOptions>({
-    text: '内部资料 · 请勿外传',
+    text: t('内部资料 · 请勿外传'),
     size: 36,
     opacity: 0.16,
     angle: -30,
@@ -191,8 +193,8 @@ export function PdfModule() {
   )
   const scopeLabel = active
     ? selection.length
-      ? `已选 ${selection.length} 页`
-      : `全部 ${active.pageCount} 页`
+      ? t('已选 {count} 页', { count: selection.length })
+      : t('全部 {count} 页', { count: active.pageCount })
     : ''
   const totalPages = files.reduce((sum, file) => sum + file.pageCount, 0)
   const notePreview = useMemo(
@@ -211,9 +213,9 @@ export function PdfModule() {
       contextRef.current = null
       return
     }
-    const title = `${active.name} · ${active.pageCount} 页`
+    const title = t('{name} · {count} 页', { name: active.name, count: active.pageCount })
     const cached = extractedRef.current.get(active.id)
-    contextRef.current = { kind: 'pdf', title, text: cached ?? '正在本地提取文本…' }
+    contextRef.current = { kind: 'pdf', title, text: cached ?? t('正在本地提取文本…') }
     if (cached !== undefined) return
     let cancelled = false
     const pages = naturalPages(active.pageCount).slice(0, 30)
@@ -229,12 +231,12 @@ export function PdfModule() {
           contextRef.current = {
             kind: 'pdf',
             title,
-            text: text || '（这份 PDF 没有可提取的文字层，可在 OCR 面板做本地识别。）',
+            text: text || t('（这份 PDF 没有可提取的文字层，可在 OCR 面板做本地识别。）'),
           }
         }
       })
       .catch(() => {
-        if (!cancelled) contextRef.current = { kind: 'pdf', title, text: '（无法提取 PDF 文本层）' }
+        if (!cancelled) contextRef.current = { kind: 'pdf', title, text: t('（无法提取 PDF 文本层）') }
       })
     return () => {
       cancelled = true
@@ -247,7 +249,7 @@ export function PdfModule() {
     try {
       await fn()
     } catch (error) {
-      toast(error instanceof Error ? error.message : '处理失败，请重试', 'error')
+      toast(error instanceof Error ? error.message : t('处理失败，请重试'), 'error')
     } finally {
       setTask(null)
     }
@@ -255,7 +257,7 @@ export function PdfModule() {
 
   const downloadPdf = (bytes: Uint8Array, filename: string) => {
     downloadBytes(bytes, filename, 'application/pdf')
-    toast(`已生成 ${filename}`, 'success')
+    toast(t('已生成 {name}', { name: filename }), 'success')
   }
 
   const addFiles = async (input: FileList | File[] | null) => {
@@ -269,18 +271,18 @@ export function PdfModule() {
         ...pictures.map((file) => ({ id: uid(), name: file.name, size: file.size, file })),
       ])
       setTab('convert')
-      toast(`已加入 ${pictures.length} 张图片`, 'success')
+      toast(t('已加入 {count} 张图片', { count: pictures.length }), 'success')
     }
     if (!pdfs.length) {
-      if (!pictures.length) toast('请选择 PDF 或图片文件', 'error')
+      if (!pictures.length) toast(t('请选择 PDF 或图片文件'), 'error')
       return
     }
     for (const file of pdfs) {
       if (file.size > 80 * 1024 * 1024) {
-        toast(`${file.name} 超过 80MB，暂不处理`, 'error')
+        toast(t('{name} 超过 80MB，暂不处理', { name: file.name }), 'error')
         continue
       }
-      setLoading(`正在打开 ${file.name}`)
+      setLoading(t('正在打开 {name}', { name: file.name }))
       try {
         const bytes = new Uint8Array(await file.arrayBuffer())
         const { doc, pageCount } = await openPdf(bytes)
@@ -298,10 +300,15 @@ export function PdfModule() {
         setAnchor(null)
         setConvertText(null)
         setOcrText(null)
-        toast(`已打开 ${file.name}`, 'success')
+        toast(t('已打开 {name}', { name: file.name }), 'success')
       } catch (error) {
         const encrypted = error instanceof Error && /password/i.test(`${error.name}${error.message}`)
-        toast(encrypted ? `${file.name} 已加密，暂不支持密码 PDF` : `${file.name} 无法解析，可能已损坏`, 'error')
+        toast(
+          encrypted
+            ? t('{name} 已加密，暂不支持密码 PDF', { name: file.name })
+            : t('{name} 无法解析，可能已损坏', { name: file.name }),
+          'error',
+        )
       }
     }
     setLoading(null)
@@ -323,13 +330,13 @@ export function PdfModule() {
 
   const loadSample = async () => {
     if (loading) return
-    setLoading('正在生成示例 PDF')
+    setLoading(t('正在生成示例 PDF'))
     try {
       const bytes = await createSamplePdf()
       const { doc, pageCount } = await openPdf(bytes)
       const item: PdfItem = {
         id: uid(),
-        name: '若道办公 · 示例合同.pdf',
+        name: t('若道办公 · 示例合同.pdf'),
         size: bytes.byteLength,
         bytes,
         pageCount,
@@ -340,9 +347,9 @@ export function PdfModule() {
       setSelection([])
       setAnchor(null)
       setTab('pages')
-      toast('示例 PDF 已载入', 'success')
+      toast(t('示例 PDF 已载入'), 'success')
     } catch (error) {
-      toast(error instanceof Error ? error.message : '示例生成失败', 'error')
+      toast(error instanceof Error ? error.message : t('示例生成失败'), 'error')
     } finally {
       setLoading(null)
     }
@@ -414,7 +421,7 @@ export function PdfModule() {
     if (text && active) {
       contextRef.current = {
         kind: 'pdf',
-        title: `${active.name} · 文本`,
+        title: t('{name} · 文本', { name: active.name }),
         text: text.slice(0, 12000),
       }
     }
@@ -424,52 +431,52 @@ export function PdfModule() {
   const copyText = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      toast('已复制到剪贴板', 'success')
+      toast(t('已复制到剪贴板'), 'success')
     } catch {
-      toast('复制失败，请手动选择文本', 'error')
+      toast(t('复制失败，请手动选择文本'), 'error')
     }
   }
 
   const handleMerge = () => {
     if (files.length < 2) {
-      toast('至少添加两个 PDF 才能合并', 'info')
+      toast(t('至少添加两个 PDF 才能合并'), 'info')
       return
     }
-    void runTask('合并 PDF', async () => {
+    void runTask(t('合并 PDF'), async () => {
       const bytes = await mergePdfs(files.map((file) => file.bytes))
-      downloadPdf(bytes, safeFilename(`${baseName(files[0].name)}_合并`, 'pdf'))
+      downloadPdf(bytes, safeFilename(`${baseName(files[0].name)}_${t('合并')}`, 'pdf'))
     })
   }
 
   const handleExtract = () => {
     if (!active || !selection.length) return
-    void runTask('提取页面', async () => {
+    void runTask(t('提取页面'), async () => {
       const bytes = await extractPdfPages(active.bytes, selection)
-      downloadPdf(bytes, safeFilename(`${baseName(active.name)}_提取`, 'pdf'))
+      downloadPdf(bytes, safeFilename(`${baseName(active.name)}_${t('提取')}`, 'pdf'))
     })
   }
 
   const handleDeletePages = () => {
     if (!active || !selection.length) return
-    void runTask('删除页面', async () => {
+    void runTask(t('删除页面'), async () => {
       const bytes = await removePdfPages(active.bytes, selection)
-      downloadPdf(bytes, safeFilename(`${baseName(active.name)}_删页`, 'pdf'))
+      downloadPdf(bytes, safeFilename(`${baseName(active.name)}_${t('删页')}`, 'pdf'))
     })
   }
 
   const handleRotate = (delta: number) => {
     if (!active) return
-    void runTask(`旋转 ${Math.abs(delta)}°`, async () => {
+    void runTask(t('旋转 {angle}°', { angle: Math.abs(delta) }), async () => {
       const bytes = await rotatePdfPages(active.bytes, selection.length ? selection : null, delta)
-      downloadPdf(bytes, safeFilename(`${baseName(active.name)}_旋转`, 'pdf'))
+      downloadPdf(bytes, safeFilename(`${baseName(active.name)}_${t('旋转')}`, 'pdf'))
     })
   }
 
   const handleSplit = () => {
     if (!active) return
-    void runTask('拆分 PDF', async () => {
+    void runTask(t('拆分 PDF'), async () => {
       const chunks = await splitPdf(active.bytes, scopePages, splitEvery)
-      if (!chunks.length) throw new Error('没有可拆分的页面')
+      if (!chunks.length) throw new Error(t('没有可拆分的页面'))
       const base = baseName(active.name)
       if (chunks.length === 1) {
         downloadPdf(chunks[0].bytes, safeFilename(`${base}_${chunks[0].label}`, 'pdf'))
@@ -481,31 +488,31 @@ export function PdfModule() {
           bytes: chunk.bytes,
         })),
       )
-      downloadBlob(blob, safeFilename(`${base}_拆分`, 'zip'))
-      toast(`已拆分为 ${chunks.length} 个文件`, 'success')
+      downloadBlob(blob, safeFilename(`${base}_${t('拆分')}`, 'zip'))
+      toast(t('已拆分为 {count} 个文件', { count: chunks.length }), 'success')
     })
   }
 
   const handleWatermark = () => {
     if (!active) return
     if (!wm.text.trim()) {
-      toast('请先填写水印文字', 'info')
+      toast(t('请先填写水印文字'), 'info')
       return
     }
-    void runTask('添加水印', async () => {
+    void runTask(t('添加水印'), async () => {
       const bytes = await addPdfWatermark(active.bytes, selection.length ? selection : null, {
         ...wm,
         text: wm.text.trim(),
       })
-      downloadPdf(bytes, safeFilename(`${baseName(active.name)}_水印`, 'pdf'))
+      downloadPdf(bytes, safeFilename(`${baseName(active.name)}_${t('水印')}`, 'pdf'))
     })
   }
 
   const handlePageNumbers = () => {
     if (!active) return
-    void runTask('添加页码', async () => {
+    void runTask(t('添加页码'), async () => {
       const bytes = await addPdfPageNumbers(active.bytes, selection.length ? selection : null, pn)
-      downloadPdf(bytes, safeFilename(`${baseName(active.name)}_页码`, 'pdf'))
+      downloadPdf(bytes, safeFilename(`${baseName(active.name)}_${t('页码')}`, 'pdf'))
     })
   }
 
@@ -527,38 +534,38 @@ export function PdfModule() {
             : selection.length
               ? selection
               : [active.pageCount]
-    void runTask('写入签名', async () => {
+    void runTask(t('写入签名'), async () => {
       const bytes = await stampPdfImage(active.bytes, pages, payload.dataUrl, {
         place: payload.place,
         widthRatio: payload.widthRatio,
         opacity: payload.opacity,
       })
-      downloadPdf(bytes, safeFilename(`${baseName(active.name)}_签署`, 'pdf'))
+      downloadPdf(bytes, safeFilename(`${baseName(active.name)}_${t('签署')}`, 'pdf'))
     })
   }
 
   const handleAddNote = () => {
     if (!active) return
     if (!noteText.trim()) {
-      toast('请先填写批注内容', 'info')
+      toast(t('请先填写批注内容'), 'info')
       return
     }
     const art = noteDataUrl({ text: noteText.trim(), author: noteAuthor, tone: noteTone })
     const pages = selection.length ? selection : [1]
-    void runTask('写入批注', async () => {
+    void runTask(t('写入批注'), async () => {
       const bytes = await stampPdfImage(active.bytes, pages, art.dataUrl, {
         place: notePlace,
         widthRatio: 0.52,
         opacity: 0.98,
       })
-      downloadPdf(bytes, safeFilename(`${baseName(active.name)}_批注`, 'pdf'))
+      downloadPdf(bytes, safeFilename(`${baseName(active.name)}_${t('批注')}`, 'pdf'))
     })
   }
 
   const handleCompress = () => {
     if (!active) return
     const preset = COMPRESS_PRESETS.find((item) => item.id === compressPreset) ?? COMPRESS_PRESETS[1]
-    void runTask('压缩 PDF', async () => {
+    void runTask(t('压缩 PDF'), async () => {
       setCompressProgress({ done: 0, total: scopePages.length })
       try {
         const result = await compressPdf(
@@ -573,8 +580,11 @@ export function PdfModule() {
           },
           (done, total) => setCompressProgress({ done, total }),
         )
-        setCompressResult({ ...result, name: safeFilename(`${baseName(active.name)}_压缩`, 'pdf') })
-        toast(`压缩完成：${formatBytes(result.before)} → ${formatBytes(result.after)}`, 'success')
+        setCompressResult({ ...result, name: safeFilename(`${baseName(active.name)}_${t('压缩')}`, 'pdf') })
+        toast(
+          t('压缩完成：{before} → {after}', { before: formatBytes(result.before), after: formatBytes(result.after) }),
+          'success',
+        )
       } finally {
         setCompressProgress(null)
       }
@@ -583,67 +593,67 @@ export function PdfModule() {
 
   const handlePdfToWord = () => {
     if (!active) return
-    void runTask('转换为 Word', async () => {
+    void runTask(t('转换为 Word'), async () => {
       const pages = await extractPdfText(active.doc, scopePages)
       const usable = pages.filter((page) => page.text.trim())
-      if (!usable.length) throw new Error('没有可提取的文字层，请先对扫描页做 OCR')
+      if (!usable.length) throw new Error(t('没有可提取的文字层，请先对扫描页做 OCR'))
       const blob = await pdfPagesToDocx(baseName(active.name), usable, usable.length > 1)
-      downloadBlob(blob, safeFilename(`${baseName(active.name)}_文字版`, 'docx'))
-      toast(`已转换 ${usable.length} 页文字为 Word`, 'success')
+      downloadBlob(blob, safeFilename(`${baseName(active.name)}_${t('文字版')}`, 'docx'))
+      toast(t('已转换 {count} 页文字为 Word', { count: usable.length }), 'success')
     })
   }
 
   const handleExportImages = () => {
     if (!active) return
-    void runTask('导出图片', async () => {
+    void runTask(t('导出图片'), async () => {
       const results = await exportPdfImages(active.doc, scopePages, imgScale, imgFormat)
-      if (!results.length) throw new Error('没有可导出的页面')
+      if (!results.length) throw new Error(t('没有可导出的页面'))
       const ext = imgFormat === 'png' ? 'png' : 'jpg'
       const base = baseName(active.name)
       if (results.length === 1) {
-        downloadBlob(results[0].blob, safeFilename(`${base}_第${results[0].page}页`, ext))
+        downloadBlob(results[0].blob, safeFilename(`${base}_${t('第{page}页', { page: results[0].page })}`, ext))
       } else {
         const entries: Array<{ name: string; bytes: Uint8Array }> = []
         for (const result of results) {
           entries.push({
-            name: `${base}_第${String(result.page).padStart(2, '0')}页.${ext}`,
+            name: `${base}_${t('第{page}页', { page: String(result.page).padStart(2, '0') })}.${ext}`,
             bytes: new Uint8Array(await result.blob.arrayBuffer()),
           })
         }
-        downloadBlob(await zipBytes(entries), safeFilename(`${base}_图片`, 'zip'))
+        downloadBlob(await zipBytes(entries), safeFilename(`${base}_${t('图片')}`, 'zip'))
       }
-      toast(`已导出 ${results.length} 张图片`, 'success')
+      toast(t('已导出 {count} 张图片', { count: results.length }), 'success')
     })
   }
 
   const handleExtractText = () => {
     if (!active) return
-    void runTask('提取文本', async () => {
+    void runTask(t('提取文本'), async () => {
       const pages = await extractPdfText(active.doc, scopePages)
       const text = pages
         .map((page) => {
           const body = page.text.trim()
-          if (!body) return `— 第 ${page.page} 页 · 无文字层 —`
-          return pages.length > 1 ? `— 第 ${page.page} 页 —\n${body}` : body
+          if (!body) return t('— 第 {page} 页 · 无文字层 —', { page: page.page })
+          return pages.length > 1 ? `${t('— 第 {page} 页 —', { page: page.page })}\n${body}` : body
         })
         .join('\n\n')
         .trim()
       setConvertText({ name: active.name, text })
       if (text) {
         extractedRef.current.set(active.id, text.slice(0, 8000))
-        contextRef.current = { kind: 'pdf', title: `${active.name} · 文本`, text: text.slice(0, 12000) }
-        toast('文本已提取', 'success')
+        contextRef.current = { kind: 'pdf', title: t('{name} · 文本', { name: active.name }), text: text.slice(0, 12000) }
+        toast(t('文本已提取'), 'success')
       } else {
-        toast('没有文字层，请改用 OCR 识别', 'info')
+        toast(t('没有文字层，请改用 OCR 识别'), 'info')
       }
     })
   }
 
   const handleImagesToPdf = () => {
     if (!images.length) return
-    void runTask('生成 PDF', async () => {
+    void runTask(t('生成 PDF'), async () => {
       const bytes = await imagesToPdf(images.map((item) => item.file), imagePageSize)
-      downloadPdf(bytes, safeFilename(`图片合集_${images.length}张`, 'pdf'))
+      downloadPdf(bytes, safeFilename(t('图片合集_{count}张', { count: images.length }), 'pdf'))
     })
   }
 
@@ -651,7 +661,7 @@ export function PdfModule() {
     if (!active || busy) return
     ocrCancelRef.current = false
     setOcrText(null)
-    setOcrRun({ page: 0, pages: scopePages.length, status: '准备中', progress: 0 })
+    setOcrRun({ page: 0, pages: scopePages.length, status: t('准备中'), progress: 0 })
     try {
       const results = await ocrPdf(
         active.doc,
@@ -662,16 +672,19 @@ export function PdfModule() {
         preferLayer,
       )
       const text = results
-        .map((item) => `— 第 ${item.page} 页${item.ocr ? ' · OCR' : ''} —\n${item.text}`)
+        .map(
+          (item) =>
+            `${t(item.ocr ? '— 第 {page} 页 · OCR —' : '— 第 {page} 页 —', { page: item.page })}\n${item.text}`,
+        )
         .join('\n\n')
         .trim()
       setOcrText({ name: active.name, text })
       extractedRef.current.set(active.id, text.slice(0, 8000))
-      contextRef.current = { kind: 'pdf', title: `${active.name} · OCR`, text: text.slice(0, 12000) }
-      toast(results.some((item) => item.ocr) ? 'OCR 识别完成' : '已读取 PDF 文字层', 'success')
+      contextRef.current = { kind: 'pdf', title: t('{name} · OCR', { name: active.name }), text: text.slice(0, 12000) }
+      toast(results.some((item) => item.ocr) ? t('OCR 识别完成') : t('已读取 PDF 文字层'), 'success')
     } catch (error) {
-      if (error instanceof Error && error.message.includes('已取消')) toast('已取消识别', 'info')
-      else toast(error instanceof Error ? error.message : 'OCR 识别失败', 'error')
+      if (error instanceof Error && error.message.includes(t('已取消识别'))) toast(t('已取消识别'), 'info')
+      else toast(error instanceof Error ? error.message : t('OCR 识别失败'), 'error')
     } finally {
       setOcrRun(null)
     }
@@ -679,7 +692,7 @@ export function PdfModule() {
 
   const cancelOcr = () => {
     ocrCancelRef.current = true
-    setOcrRun((prev) => (prev ? { ...prev, status: '正在取消…' } : prev))
+    setOcrRun((prev) => (prev ? { ...prev, status: t('正在取消…') } : prev))
   }
 
   const ocrPercent = ocrRun
@@ -732,19 +745,19 @@ export function PdfModule() {
         <header className="pdf-side-head">
           <div>
             <div className="pdf-side-title">
-              PDF 工具箱
+              {t('PDF 工具箱')}
               <span className="pdf-side-count">{files.length}</span>
             </div>
-            <p className="pdf-side-sub">离线处理 · 文件不上传</p>
+            <p className="pdf-side-sub">{t('离线处理 · 文件不上传')}</p>
           </div>
-          <button type="button" className="icon-btn" onClick={openPicker} title="添加文件" aria-label="添加文件">
+          <button type="button" className="icon-btn" onClick={openPicker} title={t('添加文件')} aria-label={t('添加文件')}>
             <Plus size={17} />
           </button>
         </header>
 
         <button type="button" className="pdf-import" onClick={openPicker}>
           <UploadCloud size={15} />
-          导入 PDF 或图片
+          {t('导入 PDF 或图片')}
         </button>
 
         <div className="pdf-file-list">
@@ -759,7 +772,7 @@ export function PdfModule() {
                     {file.name}
                   </span>
                   <span className="pdf-file-meta">
-                    {file.pageCount} 页 · {formatBytes(file.size)}
+                    {t('{count} 页 · {size}', { count: file.pageCount, size: formatBytes(file.size) })}
                   </span>
                 </span>
               </button>
@@ -767,8 +780,8 @@ export function PdfModule() {
                 <button
                   type="button"
                   className="icon-btn icon-btn-sm"
-                  title="上移"
-                  aria-label={`上移 ${file.name}`}
+                  title={t('上移')}
+                  aria-label={t('上移 {name}', { name: file.name })}
                   disabled={index === 0}
                   onClick={() => moveFile(file.id, -1)}
                 >
@@ -777,8 +790,8 @@ export function PdfModule() {
                 <button
                   type="button"
                   className="icon-btn icon-btn-sm"
-                  title="下移"
-                  aria-label={`下移 ${file.name}`}
+                  title={t('下移')}
+                  aria-label={t('下移 {name}', { name: file.name })}
                   disabled={index === files.length - 1}
                   onClick={() => moveFile(file.id, 1)}
                 >
@@ -787,8 +800,8 @@ export function PdfModule() {
                 <button
                   type="button"
                   className="icon-btn icon-btn-sm pdf-file-remove"
-                  title="移除"
-                  aria-label={`移除 ${file.name}`}
+                  title={t('移除')}
+                  aria-label={t('移除 {name}', { name: file.name })}
                   onClick={() => removeFile(file.id)}
                 >
                   <X size={12} />
@@ -801,17 +814,17 @@ export function PdfModule() {
               type="button"
               className="pdf-images-chip"
               onClick={() => setTab('convert')}
-              title="查看图片队列"
+              title={t('查看图片队列')}
             >
               <ImagePlus size={13} />
-              {images.length} 张图片待转换
+              {t('{count} 张图片待转换', { count: images.length })}
             </button>
           ) : null}
           {!files.length && !loading ? (
             <div className="pdf-side-empty">
               <FileStack size={18} />
-              <span>队列是空的</span>
-              <small>PDF 只在当前页面内处理</small>
+              <span>{t('队列是空的')}</span>
+              <small>{t('PDF 只在当前页面内处理')}</small>
             </div>
           ) : null}
           {loading ? (
@@ -824,7 +837,7 @@ export function PdfModule() {
 
         <footer className="pdf-side-foot">
           <Lock size={12} />
-          <span>关闭页面即清空内存中的文件</span>
+          <span>{t('关闭页面即清空内存中的文件')}</span>
         </footer>
       </aside>
 
@@ -836,14 +849,14 @@ export function PdfModule() {
                 <FileStack size={28} />
               </span>
               <p className="pdf-empty-eyebrow">LOCAL PDF WORKBENCH</p>
-              <h1>PDF 工具箱</h1>
+              <h1>{t('PDF 工具箱')}</h1>
               <p className="pdf-empty-desc">
-                合并、拆分、水印、签章、批注、压缩、OCR 与格式转换，全部在本地完成。没有上传队列，没有水印费用，页数也不设上限。
+                {t('合并、拆分、水印、签章、批注、压缩、OCR 与格式转换，全部在本地完成。没有上传队列，没有水印费用，页数也不设上限。')}
               </p>
               <div className="pdf-empty-actions">
                 <button type="button" className="btn btn-primary btn-lg" onClick={openPicker}>
                   <Plus size={16} />
-                  选择 PDF
+                  {t('选择 PDF')}
                 </button>
                 <button
                   type="button"
@@ -852,33 +865,33 @@ export function PdfModule() {
                   disabled={Boolean(loading)}
                 >
                   {loading ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
-                  载入示例
+                  {t('载入示例')}
                 </button>
               </div>
               <div className="pdf-empty-features">
                 <span>
-                  <SquareStack size={13} /> 合并与拆分
+                  <SquareStack size={13} /> {t('合并与拆分')}
                 </span>
                 <span>
-                  <PenLine size={13} /> 电子签章
+                  <PenLine size={13} /> {t('电子签章')}
                 </span>
                 <span>
-                  <ScanText size={13} /> 离线 OCR
+                  <ScanText size={13} /> {t('离线 OCR')}
                 </span>
                 <span>
-                  <Minimize2 size={13} /> 智能压缩
+                  <Minimize2 size={13} /> {t('智能压缩')}
                 </span>
                 <span>
-                  <FileImage size={13} /> 图片互转
+                  <FileImage size={13} /> {t('图片互转')}
                 </span>
               </div>
               <p className="pdf-empty-note">
                 <Lock size={12} />
-                无账号 · 无上传 · 关闭页面即清空
+                {t('无账号 · 无上传 · 关闭页面即清空')}
               </p>
               <div className="pdf-empty-drop">
                 <UploadCloud size={14} />
-                也可以把 PDF 或图片直接拖进来
+                {t('也可以把 PDF 或图片直接拖进来')}
               </div>
             </div>
           </div>
@@ -888,24 +901,24 @@ export function PdfModule() {
               <div className="pdf-head-info">
                 <div className="pdf-head-eyebrow">
                   <Lock size={11} />
-                  本地处理 · 文件不上传
+                  {t('本地处理 · 文件不上传')}
                 </div>
                 <h1 className="pdf-head-title" title={active.name}>
                   {active.name}
                 </h1>
                 <div className="pdf-head-meta">
-                  {active.pageCount} 页 · {formatBytes(active.size)}
-                  {files.length > 1 ? ` · 队列共 ${files.length} 个文件` : ''}
+                  {t('{count} 页 · {size}', { count: active.pageCount, size: formatBytes(active.size) })}
+                  {files.length > 1 ? t(' · 队列共 {count} 个文件', { count: files.length }) : ''}
                 </div>
               </div>
               <div className="pdf-head-actions">
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => openAi()}>
                   <Sparkles size={14} />
-                  AI 任务
+                  {t('AI 任务')}
                 </button>
                 <button type="button" className="btn btn-ghost btn-sm" onClick={openPicker}>
                   <Plus size={14} />
-                  添加
+                  {t('添加')}
                 </button>
               </div>
             </header>
@@ -915,18 +928,22 @@ export function PdfModule() {
                 <div className="pdf-gallery-bar">
                   <div className="pdf-scope">
                     <strong>{scopeLabel}</strong>
-                    <span>{selection.length ? `共 ${active.pageCount} 页` : '未选择时处理全部页面'}</span>
+                    <span>
+                      {selection.length
+                        ? t('共 {count} 页', { count: active.pageCount })
+                        : t('未选择时处理全部页面')}
+                    </span>
                   </div>
                   <div className="pdf-scope-actions">
-                    <span className="pdf-select-hint">Shift 连选 · Ctrl 点选</span>
+                    <span className="pdf-select-hint">{t('Shift 连选 · Ctrl 点选')}</span>
                     <button type="button" onClick={selectAll}>
-                      全选
+                      {t('全选')}
                     </button>
                     <button type="button" onClick={invertSelection}>
-                      反选
+                      {t('反选')}
                     </button>
                     <button type="button" onClick={() => setSelection([])} disabled={!selection.length}>
-                      清除
+                      {t('清除')}
                     </button>
                   </div>
                 </div>
@@ -946,10 +963,10 @@ export function PdfModule() {
 
               <aside className="pdf-tools">
                 <div className="pdf-tools-head">
-                  <span>工具</span>
+                  <span>{t('工具')}</span>
                   <span className="pdf-tools-scope">{scopeLabel}</span>
                 </div>
-                <div className="pdf-tools-tabs" role="tablist" aria-label="PDF 工具">
+                <div className="pdf-tools-tabs" role="tablist" aria-label={t('PDF 工具')}>
                   {TOOL_TABS.map((item) => {
                     const Icon = item.icon
                     return (
@@ -962,7 +979,7 @@ export function PdfModule() {
                         onClick={() => setTab(item.id)}
                       >
                         <Icon size={14} />
-                        <span>{item.label}</span>
+                        <span>{t(item.label)}</span>
                       </button>
                     )
                   })}
@@ -978,7 +995,7 @@ export function PdfModule() {
                   {tab === 'pages' ? (
                     <div className="pdf-tool">
                       <div className="pdf-tool-section">
-                        <div className="pdf-tool-title">页面操作</div>
+                        <div className="pdf-tool-title">{t('页面操作')}</div>
                         <div className="pdf-btn-grid">
                           <button
                             type="button"
@@ -987,7 +1004,7 @@ export function PdfModule() {
                             disabled={busy}
                           >
                             <RotateCw size={13} />
-                            顺时针 90°
+                            {t('顺时针 90°')}
                           </button>
                           <button
                             type="button"
@@ -996,7 +1013,7 @@ export function PdfModule() {
                             disabled={busy}
                           >
                             <RotateCcw size={13} />
-                            逆时针 90°
+                            {t('逆时针 90°')}
                           </button>
                         </div>
                         <button
@@ -1005,7 +1022,7 @@ export function PdfModule() {
                           onClick={() => handleRotate(180)}
                           disabled={busy}
                         >
-                          翻转 180°
+                          {t('翻转 180°')}
                         </button>
                         <button
                           type="button"
@@ -1014,13 +1031,17 @@ export function PdfModule() {
                           disabled={!selection.length || selection.length >= active.pageCount || busy}
                         >
                           <Trash2 size={13} />
-                          删除所选页面
+                          {t('删除所选页面')}
                         </button>
-                        <p className="hint">旋转会作用于{selection.length ? '所选页面' : '全部页面'}；删除前请先点选页面。</p>
+                        <p className="hint">
+                          {selection.length
+                            ? t('旋转会作用于所选页面；删除前请先点选页面。')
+                            : t('旋转会作用于全部页面；删除前请先点选页面。')}
+                        </p>
                       </div>
 
                       <div className="pdf-tool-section">
-                        <div className="pdf-tool-title">提取与拆分</div>
+                        <div className="pdf-tool-title">{t('提取与拆分')}</div>
                         <button
                           type="button"
                           className="btn btn-primary btn-sm btn-block"
@@ -1028,40 +1049,44 @@ export function PdfModule() {
                           disabled={!selection.length || busy}
                         >
                           <Scissors size={13} />
-                          提取所选页为新 PDF
+                          {t('提取所选页为新 PDF')}
                         </button>
                         <div className="pdf-split-row">
-                          <span>每</span>
+                          <span>{t('每')}</span>
                           <input
                             className="input pdf-num"
                             type="number"
                             min={1}
                             max={100}
                             value={splitEvery}
-                            aria-label="每份页数"
+                            aria-label={t('每份页数')}
                             onChange={(event) =>
                               setSplitEvery(Math.min(100, Math.max(1, Number(event.target.value) || 1)))
                             }
                           />
-                          <span>页一份</span>
+                          <span>{t('页一份')}</span>
                           <button
                             type="button"
                             className="btn btn-secondary btn-sm"
                             onClick={handleSplit}
                             disabled={busy}
                           >
-                            拆分
+                            {t('拆分')}
                           </button>
                         </div>
                         <p className="hint">
-                          {selection.length ? '按所选页拆分。' : '未选择时按全部页面拆分。'}多份结果会打包为 ZIP。
+                          {selection.length ? t('按所选页拆分。') : t('未选择时按全部页面拆分。')}
+                          {t('多份结果会打包为 ZIP。')}
                         </p>
                       </div>
 
                       <div className="pdf-tool-section">
-                        <div className="pdf-tool-title">合并队列</div>
+                        <div className="pdf-tool-title">{t('合并队列')}</div>
                         <p className="hint">
-                          {files.length} 个文件 · 共 {totalPages} 页。按左侧顺序合并，可用箭头调整。
+                          {t('{count} 个文件 · 共 {pages} 页。按左侧顺序合并，可用箭头调整。', {
+                            count: files.length,
+                            pages: totalPages,
+                          })}
                         </p>
                         <button
                           type="button"
@@ -1070,7 +1095,7 @@ export function PdfModule() {
                           disabled={files.length < 2 || busy}
                         >
                           <Merge size={13} />
-                          合并为 PDF
+                          {t('合并为 PDF')}
                         </button>
                       </div>
                     </div>
@@ -1079,14 +1104,14 @@ export function PdfModule() {
                   {tab === 'signature' ? (
                     <div className="pdf-tool">
                       <div className="pdf-tool-section">
-                        <div className="pdf-tool-title">电子签名台</div>
+                        <div className="pdf-tool-title">{t('电子签名台')}</div>
                         <div className="pdf-sign-cta">
                           <span className="pdf-sign-badge">
                             <PenLine size={18} />
                           </span>
                           <div>
-                            <strong>手写 · 键入 · 上传 · 电子印章</strong>
-                            <p>画板与印章均在本地渲染，可注明签署人与日期，支持调整尺寸和浓度。</p>
+                            <strong>{t('手写 · 键入 · 上传 · 电子印章')}</strong>
+                            <p>{t('画板与印章均在本地渲染，可注明签署人与日期，支持调整尺寸和浓度。')}</p>
                           </div>
                         </div>
                         <button
@@ -1096,26 +1121,26 @@ export function PdfModule() {
                           disabled={busy}
                         >
                           <PenLine size={13} />
-                          打开签名台
+                          {t('打开签名台')}
                         </button>
                         <p className="hint">
-                          {selection.length ? `当前已选 ${selection.length} 页，` : ''}
-                          签署合同通常落在最后一页；印章可批量盖到全部页面。
+                          {selection.length ? t('当前已选 {count} 页，', { count: selection.length }) : ''}
+                          {t('签署合同通常落在最后一页；印章可批量盖到全部页面。')}
                         </p>
                       </div>
 
                       <div className="pdf-tool-section">
-                        <div className="pdf-tool-title">页边批注</div>
+                        <div className="pdf-tool-title">{t('页边批注')}</div>
                         <textarea
                           className="textarea pdf-note-input"
                           value={noteText}
                           maxLength={160}
-                          placeholder="例如：第 3 条付款节点需法务复核。"
-                          aria-label="批注内容"
+                          placeholder={t('例如：第 3 条付款节点需法务复核。')}
+                          aria-label={t('批注内容')}
                           onChange={(event) => setNoteText(event.target.value)}
                         />
                         <div className="pdf-note-row">
-                          <div className="pdf-note-tones" aria-label="批注色">
+                          <div className="pdf-note-tones" aria-label={t('批注色')}>
                             {(Object.keys(NOTE_TONE_COLORS) as NoteTone[]).map((tone) => (
                               <button
                                 key={tone}
@@ -1123,7 +1148,7 @@ export function PdfModule() {
                                 className={cn('pdf-swatch', noteTone === tone && 'active')}
                                 style={{ background: NOTE_TONE_COLORS[tone] }}
                                 title={tone}
-                                aria-label={`批注色 ${tone}`}
+                                aria-label={t('批注色 {color}', { color: tone })}
                                 onClick={() => setNoteTone(tone)}
                               />
                             ))}
@@ -1131,25 +1156,25 @@ export function PdfModule() {
                           <select
                             className="select pdf-note-place"
                             value={notePlace}
-                            aria-label="批注位置"
+                            aria-label={t('批注位置')}
                             onChange={(event) => setNotePlace(event.target.value as PdfImagePlacement)}
                           >
-                            <option value="top-right">右上角</option>
-                            <option value="bottom-right">右下角</option>
-                            <option value="top-left">左上角</option>
-                            <option value="bottom-left">左下角</option>
+                            <option value="top-right">{t('右上角')}</option>
+                            <option value="bottom-right">{t('右下角')}</option>
+                            <option value="top-left">{t('左上角')}</option>
+                            <option value="bottom-left">{t('左下角')}</option>
                           </select>
                         </div>
                         <input
                           className="input"
                           value={noteAuthor}
                           maxLength={16}
-                          placeholder="批注人（可留空）"
+                          placeholder={t('批注人（可留空）')}
                           onChange={(event) => setNoteAuthor(event.target.value)}
                         />
                         {notePreview ? (
                           <div className="pdf-note-preview">
-                            <img src={notePreview} alt="批注预览" />
+                            <img src={notePreview} alt={t('批注预览')} />
                           </div>
                         ) : null}
                         <button
@@ -1159,9 +1184,13 @@ export function PdfModule() {
                           disabled={busy || !noteText.trim()}
                         >
                           <MessageSquare size={13} />
-                          写入批注 · {selection.length ? `所选 ${selection.length} 页` : '第 1 页'}
+                          {t('写入批注 · {scope}', {
+                            scope: selection.length
+                              ? t('所选 {count} 页', { count: selection.length })
+                              : t('第 1 页'),
+                          })}
                         </button>
-                        <p className="hint">批注作为独立图层贴在页边，不修改原文内容。写入前请保留原件。</p>
+                        <p className="hint">{t('批注作为独立图层贴在页边，不修改原文内容。写入前请保留原件。')}</p>
                       </div>
                     </div>
                   ) : null}
@@ -1169,12 +1198,12 @@ export function PdfModule() {
                   {tab === 'watermark' ? (
                     <div className="pdf-tool">
                       <div className="pdf-tool-section">
-                        <div className="pdf-tool-title">水印文字</div>
+                        <div className="pdf-tool-title">{t('水印文字')}</div>
                         <input
                           className="input"
                           value={wm.text}
                           maxLength={40}
-                          placeholder="例如：内部资料"
+                          placeholder={t('例如：内部资料')}
                           onChange={(event) => setWm((prev) => ({ ...prev, text: event.target.value }))}
                         />
                         <div className="pdf-wm-preview" aria-hidden>
@@ -1187,12 +1216,12 @@ export function PdfModule() {
                                 transform: `rotate(${wm.angle}deg)`,
                               }}
                             >
-                              {wm.text.trim() || '水印'}
+                              {wm.text.trim() || t('水印')}
                             </span>
                           ))}
                         </div>
                         <label className="pdf-range">
-                          <span>字号</span>
+                          <span>{t('字号')}</span>
                           <input
                             type="range"
                             min={14}
@@ -1203,7 +1232,7 @@ export function PdfModule() {
                           <em>{wm.size}pt</em>
                         </label>
                         <label className="pdf-range">
-                          <span>透明度</span>
+                          <span>{t('透明度')}</span>
                           <input
                             type="range"
                             min={5}
@@ -1216,7 +1245,7 @@ export function PdfModule() {
                           <em>{Math.round(wm.opacity * 100)}%</em>
                         </label>
                         <label className="pdf-range">
-                          <span>角度</span>
+                          <span>{t('角度')}</span>
                           <input
                             type="range"
                             min={-60}
@@ -1228,7 +1257,7 @@ export function PdfModule() {
                           <em>{wm.angle}°</em>
                         </label>
                         <div className="pdf-color-row">
-                          <span>颜色</span>
+                          <span>{t('颜色')}</span>
                           {WATERMARK_COLORS.map((color) => (
                             <button
                               key={color}
@@ -1236,7 +1265,7 @@ export function PdfModule() {
                               className={cn('pdf-swatch', wm.color === color && 'active')}
                               style={{ background: color }}
                               title={color}
-                              aria-label={`水印颜色 ${color}`}
+                              aria-label={t('水印颜色 {color}', { color })}
                               onClick={() => setWm((prev) => ({ ...prev, color }))}
                             />
                           ))}
@@ -1246,7 +1275,7 @@ export function PdfModule() {
                               checked={wm.tiled}
                               onChange={(event) => setWm((prev) => ({ ...prev, tiled: event.target.checked }))}
                             />
-                            铺满页面
+                            {t('铺满页面')}
                           </label>
                         </div>
                         <button
@@ -1256,7 +1285,7 @@ export function PdfModule() {
                           disabled={busy}
                         >
                           <Droplets size={13} />
-                          添加水印 · {scopeLabel}
+                          {t('添加水印 · {scope}', { scope: scopeLabel })}
                         </button>
                       </div>
                     </div>
@@ -1265,10 +1294,10 @@ export function PdfModule() {
                   {tab === 'numbers' ? (
                     <div className="pdf-tool">
                       <div className="pdf-tool-section">
-                        <div className="pdf-tool-title">页码</div>
+                        <div className="pdf-tool-title">{t('页码')}</div>
                         <div className="field">
                           <label className="field-label" htmlFor="pn-position">
-                            位置
+                            {t('位置')}
                           </label>
                           <select
                             id="pn-position"
@@ -1278,15 +1307,15 @@ export function PdfModule() {
                               setPn((prev) => ({ ...prev, position: event.target.value as PageNumberOptions['position'] }))
                             }
                           >
-                            <option value="bottom-center">底部居中</option>
-                            <option value="bottom-right">底部靠右</option>
-                            <option value="bottom-left">底部靠左</option>
-                            <option value="top-center">顶部居中</option>
+                            <option value="bottom-center">{t('底部居中')}</option>
+                            <option value="bottom-right">{t('底部靠右')}</option>
+                            <option value="bottom-left">{t('底部靠左')}</option>
+                            <option value="top-center">{t('顶部居中')}</option>
                           </select>
                         </div>
                         <div className="field">
                           <label className="field-label" htmlFor="pn-template">
-                            样式
+                            {t('样式')}
                           </label>
                           <select
                             id="pn-template"
@@ -1302,7 +1331,7 @@ export function PdfModule() {
                         </div>
                         <div className="pdf-inline">
                           <label className="field">
-                            <span className="field-label">起始页码</span>
+                            <span className="field-label">{t('起始页码')}</span>
                             <input
                               className="input pdf-num"
                               type="number"
@@ -1315,7 +1344,7 @@ export function PdfModule() {
                             />
                           </label>
                           <label className="field">
-                            <span className="field-label">字号</span>
+                            <span className="field-label">{t('字号')}</span>
                             <input
                               className="input pdf-num"
                               type="number"
@@ -1334,7 +1363,7 @@ export function PdfModule() {
                             checked={pn.skipFirst}
                             onChange={(event) => setPn((prev) => ({ ...prev, skipFirst: event.target.checked }))}
                           />
-                          首页不显示页码
+                          {t('首页不显示页码')}
                         </label>
                         <button
                           type="button"
@@ -1343,9 +1372,9 @@ export function PdfModule() {
                           disabled={busy}
                         >
                           <Hash size={13} />
-                          添加页码 · {scopeLabel}
+                          {t('添加页码 · {scope}', { scope: scopeLabel })}
                         </button>
-                        <p className="hint">页码使用内嵌标准字体绘制，不依赖网络或系统字体。</p>
+                        <p className="hint">{t('页码使用内嵌标准字体绘制，不依赖网络或系统字体。')}</p>
                       </div>
                     </div>
                   ) : null}
@@ -1353,7 +1382,7 @@ export function PdfModule() {
                   {tab === 'compress' ? (
                     <div className="pdf-tool">
                       <div className="pdf-tool-section">
-                        <div className="pdf-tool-title">压缩级别</div>
+                        <div className="pdf-tool-title">{t('压缩级别')}</div>
                         <div className="pdf-preset-list">
                           {COMPRESS_PRESETS.map((item) => (
                             <button
@@ -1367,15 +1396,15 @@ export function PdfModule() {
                             >
                               <span className="pdf-preset-dot" aria-hidden />
                               <span className="pdf-preset-body">
-                                <strong>{item.label}</strong>
-                                <small>{item.note}</small>
+                                <strong>{t(item.label)}</strong>
+                                <small>{t(item.note)}</small>
                               </span>
                               <em>{item.dpi} DPI</em>
                             </button>
                           ))}
                         </div>
                         <label className="pdf-range">
-                          <span>画质</span>
+                          <span>{t('画质')}</span>
                           <input
                             type="range"
                             min={35}
@@ -1391,7 +1420,7 @@ export function PdfModule() {
                             checked={compressPreserveText}
                             onChange={(event) => setCompressPreserveText(event.target.checked)}
                           />
-                          保留文字页矢量（推荐）
+                          {t('保留文字页矢量（推荐）')}
                         </label>
                         <label className="pdf-check">
                           <input
@@ -1399,7 +1428,7 @@ export function PdfModule() {
                             checked={compressGrayscale}
                             onChange={(event) => setCompressGrayscale(event.target.checked)}
                           />
-                          转为灰度（扫描件体积更小）
+                          {t('转为灰度（扫描件体积更小）')}
                         </label>
                         <button
                           type="button"
@@ -1408,17 +1437,21 @@ export function PdfModule() {
                           disabled={busy}
                         >
                           <Minimize2 size={13} />
-                          压缩 {scopeLabel}
+                          {t('压缩 {scope}', { scope: scopeLabel })}
                         </button>
                         <p className="hint">
-                          扫描页与图片页会重新采样为 JPEG；文字页保持矢量清晰。{selection.length ? `当前仅压缩所选 ${selection.length} 页。` : ''}
+                          {t('扫描页与图片页会重新采样为 JPEG；文字页保持矢量清晰。')}
+                          {selection.length ? t('当前仅压缩所选 {count} 页。', { count: selection.length }) : ''}
                         </p>
                         {compressProgress ? (
                           <div className="pdf-compress-progress">
                             <div className="pdf-ocr-status">
-                              <span>正在重新采样页面</span>
+                              <span>{t('正在重新采样页面')}</span>
                               <span>
-                                {compressProgress.done} / {compressProgress.total} 页
+                                {t('{done} / {total} 页', {
+                                  done: compressProgress.done,
+                                  total: compressProgress.total,
+                                })}
                               </span>
                             </div>
                             <div className="pdf-progress">
@@ -1434,12 +1467,12 @@ export function PdfModule() {
                           <div className="pdf-compress-result">
                             <div className="pdf-compress-sizes">
                               <span>
-                                <small>原始</small>
+                                <small>{t('原始')}</small>
                                 <strong>{formatBytes(compressResult.before)}</strong>
                               </span>
                               <span className="pdf-compress-arrow">→</span>
                               <span>
-                                <small>压缩后</small>
+                                <small>{t('压缩后')}</small>
                                 <strong>{formatBytes(compressResult.after)}</strong>
                               </span>
                               {compressResult.after < compressResult.before ? (
@@ -1451,10 +1484,13 @@ export function PdfModule() {
                               )}
                             </div>
                             <div className="pdf-compress-meta">
-                              重采样 {compressResult.rasterized} 页 · 保留文字 {compressResult.preserved} 页
+                              {t('重采样 {rasterized} 页 · 保留文字 {preserved} 页', {
+                                rasterized: compressResult.rasterized,
+                                preserved: compressResult.preserved,
+                              })}
                             </div>
                             {compressResult.after >= compressResult.before ? (
-                              <p className="pdf-compress-warning">这份文件已接近最优体积，建议保留原件；扫描件压缩效果通常更明显。</p>
+                              <p className="pdf-compress-warning">{t('这份文件已接近最优体积，建议保留原件；扫描件压缩效果通常更明显。')}</p>
                             ) : null}
                             <button
                               type="button"
@@ -1462,15 +1498,17 @@ export function PdfModule() {
                               onClick={() => downloadPdf(compressResult.bytes, compressResult.name)}
                             >
                               <Download size={13} />
-                              {compressResult.after < compressResult.before ? '下载压缩文件' : '仍要下载（体积更大）'}
+                              {compressResult.after < compressResult.before
+                                ? t('下载压缩文件')
+                                : t('仍要下载（体积更大）')}
                             </button>
                           </div>
                         ) : null}
                       </div>
                       <div className="pdf-tool-section">
-                        <div className="pdf-tool-title">无损处理</div>
+                        <div className="pdf-tool-title">{t('无损处理')}</div>
                         <p className="hint">
-                          只想删空白页或调整方向？在「页面」标签中提取、删除与旋转，不会损失任何画质。
+                          {t('只想删空白页或调整方向？在「页面」标签中提取、删除与旋转，不会损失任何画质。')}
                         </p>
                       </div>
                     </div>
@@ -1479,7 +1517,7 @@ export function PdfModule() {
                   {tab === 'convert' ? (
                     <div className="pdf-tool">
                       <div className="pdf-tool-section">
-                        <div className="pdf-tool-title">PDF 转 Word</div>
+                        <div className="pdf-tool-title">{t('PDF 转 Word')}</div>
                         <button
                           type="button"
                           className="btn btn-primary btn-sm btn-block"
@@ -1487,19 +1525,18 @@ export function PdfModule() {
                           disabled={busy}
                         >
                           <FileDown size={13} />
-                          转为 Word · {scopeLabel}
+                          {t('转为 Word · {scope}', { scope: scopeLabel })}
                         </button>
                         <p className="hint">
-                          重建标题与段落结构，保留分页；复杂表格、图片和原版式不会还原。扫描件请先在 OCR
-                          标签识别。
+                          {t('重建标题与段落结构，保留分页；复杂表格、图片和原版式不会还原。扫描件请先在 OCR 标签识别。')}
                         </p>
                       </div>
 
                       <div className="pdf-tool-section">
-                        <div className="pdf-tool-title">PDF 转图片</div>
+                        <div className="pdf-tool-title">{t('PDF 转图片')}</div>
                         <div className="pdf-inline">
                           <label className="field">
-                            <span className="field-label">格式</span>
+                            <span className="field-label">{t('格式')}</span>
                             <select
                               className="select"
                               value={imgFormat}
@@ -1510,7 +1547,7 @@ export function PdfModule() {
                             </select>
                           </label>
                           <label className="field">
-                            <span className="field-label">清晰度</span>
+                            <span className="field-label">{t('清晰度')}</span>
                             <select
                               className="select"
                               value={imgScale}
@@ -1529,13 +1566,13 @@ export function PdfModule() {
                           disabled={busy}
                         >
                           <FileImage size={13} />
-                          导出 {scopeLabel}图片
+                          {t('导出 {scope}图片', { scope: scopeLabel })}
                         </button>
-                        <p className="hint">多页结果会自动打包为 ZIP。</p>
+                        <p className="hint">{t('多页结果会自动打包为 ZIP。')}</p>
                       </div>
 
                       <div className="pdf-tool-section">
-                        <div className="pdf-tool-title">PDF 转文本</div>
+                        <div className="pdf-tool-title">{t('PDF 转文本')}</div>
                         <button
                           type="button"
                           className="btn btn-secondary btn-sm btn-block"
@@ -1543,19 +1580,19 @@ export function PdfModule() {
                           disabled={busy}
                         >
                           <FileText size={13} />
-                          提取 {scopeLabel}文本
+                          {t('提取 {scope}文本', { scope: scopeLabel })}
                         </button>
-                        <p className="hint">读取已有文字层；扫描件请使用 OCR。</p>
+                        <p className="hint">{t('读取已有文字层；扫描件请使用 OCR。')}</p>
                         {convertText ? (
                           <div className="pdf-result">
                             <textarea
                               className="textarea pdf-textarea"
                               value={convertText.text}
                               onChange={(event) => setConvertText({ ...convertText, text: event.target.value })}
-                              aria-label="提取的文本"
+                              aria-label={t('提取的文本')}
                             />
                             <div className="pdf-result-meta">
-                              {convertText.text.replace(/\s/g, '').length} 字
+                              {t('{count} 字', { count: convertText.text.replace(/\s/g, '').length })}
                             </div>
                             <div className="pdf-result-actions">
                               <button
@@ -1564,7 +1601,7 @@ export function PdfModule() {
                                 onClick={() =>
                                   downloadText(
                                     convertText.text,
-                                    safeFilename(`${baseName(convertText.name)}_文本`, 'txt'),
+                                    safeFilename(`${baseName(convertText.name)}_${t('文本')}`, 'txt'),
                                   )
                                 }
                               >
@@ -1573,7 +1610,7 @@ export function PdfModule() {
                               </button>
                               <button type="button" className="btn btn-ghost btn-sm" onClick={() => void copyText(convertText.text)}>
                                 <ClipboardCopy size={12} />
-                                复制
+                                {t('复制')}
                               </button>
                               <button
                                 type="button"
@@ -1581,12 +1618,12 @@ export function PdfModule() {
                                 onClick={() =>
                                   openAi(
                                     convertText.text,
-                                    '请把下面的 PDF 文本整理成结构清晰的中文要点清单，并标出关键数字与日期。',
+                                    t('请把下面的 PDF 文本整理成结构清晰的中文要点清单，并标出关键数字与日期。'),
                                   )
                                 }
                               >
                                 <Sparkles size={12} />
-                                AI 整理
+                                {t('AI 整理')}
                               </button>
                             </div>
                           </div>
@@ -1594,7 +1631,7 @@ export function PdfModule() {
                       </div>
 
                       <div className="pdf-tool-section">
-                        <div className="pdf-tool-title">图片转 PDF</div>
+                        <div className="pdf-tool-title">{t('图片转 PDF')}</div>
                         {images.length ? (
                           <div className="pdf-image-list">
                             {images.map((image) => (
@@ -1605,8 +1642,8 @@ export function PdfModule() {
                                 <button
                                   type="button"
                                   className="icon-btn icon-btn-sm"
-                                  title="移除图片"
-                                  aria-label={`移除 ${image.name}`}
+                                  title={t('移除图片')}
+                                  aria-label={t('移除 {name}', { name: image.name })}
                                   onClick={() => setImages((prev) => prev.filter((item) => item.id !== image.id))}
                                 >
                                   <X size={12} />
@@ -1615,20 +1652,20 @@ export function PdfModule() {
                             ))}
                           </div>
                         ) : (
-                          <p className="hint">还没有图片。把 JPG / PNG 拖进窗口，或点下方添加。</p>
+                          <p className="hint">{t('还没有图片。把 JPG / PNG 拖进窗口，或点下方添加。')}</p>
                         )}
                         <button type="button" className="btn btn-secondary btn-sm btn-block" onClick={openPicker}>
                           <ImagePlus size={13} />
-                          添加图片
+                          {t('添加图片')}
                         </button>
                         <select
                           className="select"
                           value={imagePageSize}
                           onChange={(event) => setImagePageSize(event.target.value as 'a4' | 'fit')}
-                          aria-label="图片 PDF 页面尺寸"
+                          aria-label={t('图片 PDF 页面尺寸')}
                         >
-                          <option value="a4">A4 页面 · 居中留白</option>
-                          <option value="fit">页面贴合图片</option>
+                          <option value="a4">{t('A4 页面 · 居中留白')}</option>
+                          <option value="fit">{t('页面贴合图片')}</option>
                         </select>
                         <button
                           type="button"
@@ -1637,7 +1674,7 @@ export function PdfModule() {
                           disabled={!images.length || busy}
                         >
                           <FilePlus2 size={13} />
-                          生成 PDF（{images.length} 张）
+                          {t('生成 PDF（{count} 张）', { count: images.length })}
                         </button>
                       </div>
                     </div>
@@ -1646,14 +1683,13 @@ export function PdfModule() {
                   {tab === 'ocr' ? (
                     <div className="pdf-tool">
                       <div className="pdf-tool-section">
-                        <div className="pdf-tool-title">离线 OCR</div>
+                        <div className="pdf-tool-title">{t('离线 OCR')}</div>
                         <p className="hint">
-                          Tesseract 引擎与中文语言包随应用保存在本机，扫描件不会上传。首次识别会初始化约 6MB
-                          的模型文件。
+                          {t('Tesseract 引擎与中文语言包随应用保存在本机，扫描件不会上传。首次识别会初始化约 6MB 的模型文件。')}
                         </p>
                         <div className="field">
                           <label className="field-label" htmlFor="ocr-lang">
-                            识别语言
+                            {t('识别语言')}
                           </label>
                           <select
                             id="ocr-lang"
@@ -1661,9 +1697,9 @@ export function PdfModule() {
                             value={ocrLang}
                             onChange={(event) => setOcrLang(event.target.value as typeof ocrLang)}
                           >
-                            <option value="chi_sim+eng">中文简体 + 英文</option>
-                            <option value="chi_sim">仅中文简体</option>
-                            <option value="eng">仅英文</option>
+                            <option value="chi_sim+eng">{t('中文简体 + 英文')}</option>
+                            <option value="chi_sim">{t('仅中文简体')}</option>
+                            <option value="eng">{t('仅英文')}</option>
                           </select>
                         </div>
                         <label className="pdf-check">
@@ -1672,7 +1708,7 @@ export function PdfModule() {
                             checked={preferLayer}
                             onChange={(event) => setPreferLayer(event.target.checked)}
                           />
-                          优先使用已有文字层
+                          {t('优先使用已有文字层')}
                         </label>
                         <button
                           type="button"
@@ -1681,9 +1717,9 @@ export function PdfModule() {
                           disabled={busy}
                         >
                           {ocrRun ? <Loader2 size={13} className="spin" /> : <ScanText size={13} />}
-                          {ocrRun ? '识别中…' : `识别 ${scopeLabel}`}
+                          {ocrRun ? t('识别中…') : t('识别 {scope}', { scope: scopeLabel })}
                         </button>
-                        <p className="hint">中英文混排时逐页显示进度，可以随时取消。</p>
+                        <p className="hint">{t('中英文混排时逐页显示进度，可以随时取消。')}</p>
                       </div>
 
                       {ocrRun ? (
@@ -1691,14 +1727,18 @@ export function PdfModule() {
                           <div className="pdf-ocr-status">
                             <span>{ocrRun.status}</span>
                             <span>
-                              {Math.min(ocrRun.page, ocrRun.pages)} / {ocrRun.pages} 页 · {ocrPercent}%
+                              {t('{page} / {pages} 页 · {percent}%', {
+                                page: Math.min(ocrRun.page, ocrRun.pages),
+                                pages: ocrRun.pages,
+                                percent: ocrPercent,
+                              })}
                             </span>
                           </div>
                           <div className="pdf-progress">
                             <span style={{ width: `${ocrPercent}%` }} />
                           </div>
                           <button type="button" className="btn btn-ghost btn-sm" onClick={cancelOcr}>
-                            取消识别
+                            {t('取消识别')}
                           </button>
                         </div>
                       ) : null}
@@ -1709,9 +1749,11 @@ export function PdfModule() {
                             className="textarea pdf-textarea pdf-textarea-tall"
                             value={ocrText.text}
                             onChange={(event) => setOcrText({ ...ocrText, text: event.target.value })}
-                            aria-label="OCR 识别结果"
+                            aria-label={t('OCR 识别结果')}
                           />
-                          <div className="pdf-result-meta">{ocrText.text.replace(/\s/g, '').length} 字</div>
+                          <div className="pdf-result-meta">
+                            {t('{count} 字', { count: ocrText.text.replace(/\s/g, '').length })}
+                          </div>
                           <div className="pdf-result-actions">
                             <button
                               type="button"
@@ -1725,17 +1767,17 @@ export function PdfModule() {
                             </button>
                             <button type="button" className="btn btn-ghost btn-sm" onClick={() => void copyText(ocrText.text)}>
                               <ClipboardCopy size={12} />
-                              复制
+                              {t('复制')}
                             </button>
                             <button
                               type="button"
                               className="btn btn-ghost btn-sm"
                               onClick={() =>
-                                openAi(ocrText.text, '请校正下面的 OCR 文本，补全断行，并整理成结构清晰的要点。')
+                                openAi(ocrText.text, t('请校正下面的 OCR 文本，补全断行，并整理成结构清晰的要点。'))
                               }
                             >
                               <Sparkles size={12} />
-                              AI 校对
+                              {t('AI 校对')}
                             </button>
                           </div>
                         </div>
@@ -1749,10 +1791,10 @@ export function PdfModule() {
             <footer className="pdf-status">
               <span>
                 <Check size={12} />
-                全部处理在浏览器内完成
+                {t('全部处理在浏览器内完成')}
               </span>
               <span>
-                {files.length} 个文件 · {totalPages} 页
+                {t('{files} 个文件 · {pages} 页', { files: files.length, pages: totalPages })}
               </span>
             </footer>
           </>
@@ -1772,8 +1814,8 @@ export function PdfModule() {
         <div className="pdf-drop-overlay">
           <div>
             <UploadCloud size={26} />
-            <strong>松开即可加入队列</strong>
-            <span>支持 PDF、JPG、PNG 等图片格式</span>
+            <strong>{t('松开即可加入队列')}</strong>
+            <span>{t('支持 PDF、JPG、PNG 等图片格式')}</span>
           </div>
         </div>
       ) : null}

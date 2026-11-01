@@ -65,6 +65,7 @@ import type {
   SheetValidation,
 } from '../../types'
 import { ConfirmDialog, Dropdown } from '../../components/ui'
+import { t, useT } from '../../i18n'
 import { registerAiContext, registerAiInsert } from '../../lib/aiContext'
 import {
   buildConditionalIndex,
@@ -162,15 +163,15 @@ function validationAt(tab: SheetTab, row: number, col: number): SheetValidation 
 
 function validationProblem(rule: SheetValidation, raw: string): string | null {
   const value = raw.trim()
-  if (!value) return rule.allowBlank ? null : rule.message || '这个单元格不能留空'
+  if (!value) return rule.allowBlank ? null : rule.message || t('这个单元格不能留空')
   if (rule.type === 'list') {
     if (rule.list.includes(value)) return null
-    return rule.message || `请从下拉列表中选择：${rule.list.join('、')}`
+    return rule.message || t('请从下拉列表中选择：{options}', { options: rule.list.join(t('、')) })
   }
   const numeric = Number(value)
-  if (!Number.isFinite(numeric)) return rule.message || '请输入数字'
-  if (rule.min !== undefined && numeric < rule.min) return rule.message || `数值不能小于 ${rule.min}`
-  if (rule.max !== undefined && numeric > rule.max) return rule.message || `数值不能大于 ${rule.max}`
+  if (!Number.isFinite(numeric)) return rule.message || t('请输入数字')
+  if (rule.min !== undefined && numeric < rule.min) return rule.message || t('数值不能小于 {min}', { min: rule.min })
+  if (rule.max !== undefined && numeric > rule.max) return rule.message || t('数值不能大于 {max}', { max: rule.max })
   return null
 }
 
@@ -242,6 +243,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
   const deleteFile = useLibrary((s) => s.deleteFile)
   const toast = useUI((s) => s.toast)
   const openAiTask = useUI((s) => s.openAiTask)
+  const t = useT()
 
   const tabIndex = clamp(sheet.activeTab, 0, Math.max(0, sheet.tabs.length - 1))
   const tab = sheet.tabs[tabIndex]
@@ -505,10 +507,10 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
   const guardProtected = useCallback(
     (current: SheetTab) => {
       if (!current.protected) return false
-      toast('工作表已保护，先取消保护后再修改', 'info')
+      toast(t('工作表已保护，先取消保护后再修改'), 'info')
       return true
     },
-    [toast],
+    [t, toast],
   )
 
   const commitCells = useCallback(
@@ -820,7 +822,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
         }
         const line = values.join('\t')
         if (length + line.length > 4000) {
-          lines.push('…（区域过大，已截断）')
+          lines.push(t('…（区域过大，已截断）'))
           break
         }
         lines.push(line)
@@ -833,10 +835,10 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
       return {
         kind: 'sheet',
         title: `${current.title} · ${activeTab.name}`,
-        text: `工作表：${activeTab.name}\n区域：${address}\n\n${lines.join('\n')}`,
+        text: t('工作表：{tab}\n区域：{range}\n\n{data}', { tab: activeTab.name, range: address, data: lines.join('\n') }),
       }
     })
-  }, [])
+  }, [t])
 
   useEffect(() => {
     return registerAiInsert('sheets', (text) => {
@@ -860,10 +862,10 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
     const current = sheetRef.current
     const names = new Set(current.tabs.map((item) => item.name))
     let n = current.tabs.length + 1
-    while (names.has(`工作表 ${n}`)) n += 1
+    while (names.has(t('工作表 {n}', { n }))) n += 1
     const nextTab: SheetTab = {
       id: uid(),
-      name: `工作表 ${n}`,
+      name: t('工作表 {n}', { n }),
       cells: {},
       rows: 80,
       cols: 18,
@@ -877,10 +879,10 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
     const source = current.tabs[tabIndex]
     if (!source) return
     const names = new Set(current.tabs.map((item) => item.name))
-    let name = `${source.name} 副本`
+    let name = t('{name} 副本', { name: source.name })
     let n = 2
     while (names.has(name)) {
-      name = `${source.name} 副本 ${n}`
+      name = t('{name} 副本 {n}', { name: source.name, n })
       n += 1
     }
     const cells: Record<string, CellData> = {}
@@ -909,7 +911,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
     const tabs = [...current.tabs]
     tabs.splice(tabIndex + 1, 0, copy)
     updateSheet(current.id, { tabs, activeTab: tabIndex + 1 })
-    toast('已复制工作表', 'success')
+    toast(t('已复制工作表'), 'success')
   }
 
   const deleteTab = () => {
@@ -917,7 +919,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
     if (current.tabs.length <= 1) return
     const tabs = current.tabs.filter((_, index) => index !== tabIndex)
     updateSheet(current.id, { tabs, activeTab: Math.min(tabIndex, tabs.length - 1) })
-    toast('工作表已删除')
+    toast(t('工作表已删除'))
   }
 
   const commitRename = () => {
@@ -934,13 +936,13 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
     setTitleDraft(value)
     if (titleTimerRef.current) window.clearTimeout(titleTimerRef.current)
     titleTimerRef.current = window.setTimeout(() => {
-      updateSheet(sheetRef.current.id, { title: value.trim() || '未命名表格' })
+      updateSheet(sheetRef.current.id, { title: value.trim() || t('未命名表格') })
     }, 420)
   }
 
   const commitTitle = () => {
     if (titleTimerRef.current) window.clearTimeout(titleTimerRef.current)
-    updateSheet(sheetRef.current.id, { title: titleDraft.trim() || '未命名表格' })
+    updateSheet(sheetRef.current.id, { title: titleDraft.trim() || t('未命名表格') })
   }
 
   const handleUndo = () => {
@@ -971,7 +973,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
       while (top >= 0 && typeof currentEvaluator.valueAt(top, box.c1) === 'number') top -= 1
       const start = top + 1
       if (start > box.r1 - 1) {
-        toast('上方没有可求和的数字', 'info')
+        toast(t('上方没有可求和的数字'), 'info')
         return
       }
       formula = `=SUM(${colToName(box.c1)}${start + 1}:${colToName(box.c1)}${box.r1})`
@@ -979,7 +981,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
       formula = `=SUM(${colToName(box.c1)}${box.r1 + 1}:${colToName(box.c2)}${box.r2 + 1})`
     }
     if (targetRow >= current.rows) {
-      toast('下方已没有空行可写入', 'info')
+      toast(t('下方已没有空行可写入'), 'info')
       return
     }
     commitCells([{ row: targetRow, col: targetCol, raw: formula }])
@@ -1003,7 +1005,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
       ? { ...block, rows: block.r2 - block.r1 + 1, cols: block.c2 - block.c1 + 1 }
       : selected
     if (box.r2 <= box.r1) {
-      toast('这里还没有可排序的数据', 'info')
+      toast(t('这里还没有可排序的数据'), 'info')
       return
     }
     const anchor = selectionRef.current.anchor
@@ -1012,7 +1014,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
       (merge) => !(merge.r2 < box.r1 || merge.r1 > box.r2 || merge.c2 < box.c1 || merge.c1 > box.c2),
     )
     if (overlapsMerge) {
-      toast('排序区域包含合并单元格，请先取消合并', 'error')
+      toast(t('排序区域包含合并单元格，请先取消合并'), 'error')
       return
     }
 
@@ -1035,7 +1037,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
     const keepHeader = rowHasText && !rowHasNumber && belowHasNumber
     const start = keepHeader ? box.r1 + 1 : box.r1
     if (start >= box.r2) {
-      toast('只有表头，没有可以排序的记录', 'info')
+      toast(t('只有表头，没有可以排序的记录'), 'info')
       return
     }
 
@@ -1080,7 +1082,14 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
       anchor: { row: start, col: box.c1 },
       focus: { row: box.r2, col: box.c2 },
     })
-    toast(`已按 ${colToName(targetCol)} 列${direction === 'asc' ? '升序' : '降序'}排序${keepHeader ? '，表头保持不动' : ''}`, 'success')
+    toast(
+      t('已按 {col} 列{direction}排序{suffix}', {
+        col: colToName(targetCol),
+        direction: direction === 'asc' ? t('升序') : t('降序'),
+        suffix: keepHeader ? t('，表头保持不动') : '',
+      }),
+      'success',
+    )
   }
 
   const toggleMerge = () => {
@@ -1095,11 +1104,11 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
     )
     if (box.rows === 1 && box.cols === 1) {
       if (!anchored) {
-        toast('先框选两个以上单元格，再合并', 'info')
+        toast(t('先框选两个以上单元格，再合并'), 'info')
         return
       }
       updateWithHistory(current, { merges: mergesNow.filter((merge) => merge !== anchored) })
-      toast('已取消合并')
+      toast(t('已取消合并'))
       return
     }
     if (anchored && anchored.r1 === box.r1 && anchored.r2 === box.r2 && anchored.c1 === box.c1 && anchored.c2 === box.c2) {
@@ -1111,14 +1120,14 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
       (merge) => !(merge.r2 < box.r1 || merge.r1 > box.r2 || merge.c2 < box.c1 || merge.c1 > box.c2),
     )
     if (overlap) {
-      toast('选区与已有合并区域重叠，请先取消原来的合并', 'error')
+      toast(t('选区与已有合并区域重叠，请先取消原来的合并'), 'error')
       return
     }
     updateWithHistory(current, {
       merges: [...mergesNow, { r1: box.r1, r2: box.r2, c1: box.c1, c2: box.c2 }],
     })
     setSelection({ anchor: { row: box.r1, col: box.c1 }, focus: { row: box.r2, col: box.c2 } })
-    toast(`已合并 ${box.rows} × ${box.cols} 个单元格`, 'success')
+    toast(t('已合并 {rows} × {cols} 个单元格', { rows: box.rows, cols: box.cols }), 'success')
   }
 
   const applyFreeze = (rows: number, cols: number) => {
@@ -1126,17 +1135,17 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
     const same = (current.freeze?.rows ?? 0) === rows && (current.freeze?.cols ?? 0) === cols
     const next = same || (rows === 0 && cols === 0) ? undefined : { rows, cols }
     updateWithHistory(current, { freeze: next })
-    if (!next) toast('已取消冻结窗格')
+    if (!next) toast(t('已取消冻结窗格'))
     else {
-      const pieces = [rows > 0 ? `${rows} 行` : '', cols > 0 ? `${cols} 列` : ''].filter(Boolean)
-      toast(`已冻结 ${pieces.join(' 和 ')}`, 'success')
+      const pieces = [rows > 0 ? t('{n} 行', { n: rows }) : '', cols > 0 ? t('{n} 列', { n: cols }) : ''].filter(Boolean)
+      toast(t('已冻结 {parts}', { parts: pieces.join(t(' 和 ')) }), 'success')
     }
   }
 
   const freezeAtSelection = () => {
     const anchor = selectionRef.current.anchor
     if (anchor.row === 0 && anchor.col === 0) {
-      toast('请选中一行或一列之后再冻结', 'info')
+      toast(t('请选中一行或一列之后再冻结'), 'info')
       return
     }
     applyFreeze(anchor.row, anchor.col)
@@ -1197,8 +1206,13 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
       if (firstVisible !== undefined) setSingleSelection(firstVisible, col)
     }
     if (keep) {
-      toast(values.length === 0 ? `已按「${name}」隐藏所有记录` : `已按「${name}」保留 ${values.length} 个值`, 'success')
-    } else toast(`已清除「${name}」的筛选`)
+      toast(
+        values.length === 0
+          ? t('已按「{name}」隐藏所有记录', { name })
+          : t('已按「{name}」保留 {n} 个值', { name, n: values.length }),
+        'success',
+      )
+    } else toast(t('已清除「{name}」的筛选', { name }))
   }
 
   const removeFilterRule = (col: number) => {
@@ -1207,14 +1221,14 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
     updateWithHistory(current, {
       filters: { ...current.filters, rules: current.filters.rules.filter((rule) => rule.col !== col) },
     })
-    toast('已移除该列筛选')
+    toast(t('已移除该列筛选'))
   }
 
   const clearFilters = () => {
     const current = liveTab()
     if (!current.filters?.rules.length) return
     updateWithHistory(current, { filters: { ...current.filters, rules: [] } })
-    toast('已清除全部筛选')
+    toast(t('已清除全部筛选'))
   }
 
   const openDataTool = (tool: 'validation' | 'split' | 'dedupe') => {
@@ -1233,7 +1247,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
       scope = { ...block, rows: block.r2 - block.r1 + 1, cols: block.c2 - block.c1 + 1 }
     }
     if (tool === 'dedupe' && scope.rows < 2) {
-      toast('在当前区域没有找到可去重的多行数据', 'info')
+      toast(t('在当前区域没有找到可去重的多行数据'), 'info')
       return
     }
     setDataScope(scope)
@@ -1256,7 +1270,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
       else validations.push(next)
     }
     updateWithHistory(current, { validations })
-    toast(existingId ? '数据有效性已更新' : '已应用数据有效性', 'success')
+    toast(existingId ? t('数据有效性已更新') : t('已应用数据有效性'), 'success')
     setDataTool(null)
   }
 
@@ -1266,7 +1280,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
     const validations = (current.validations ?? []).filter((rule) => rule.id !== id)
     if (validations.length === (current.validations?.length ?? 0)) return
     updateWithHistory(current, { validations })
-    toast('有效性规则已删除')
+    toast(t('有效性规则已删除'))
   }
 
   const clearValidation = () => {
@@ -1280,7 +1294,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
       return
     }
     updateWithHistory(current, { validations })
-    toast('已清除该区域的数据有效性', 'success')
+    toast(t('已清除该区域的数据有效性'), 'success')
     setDataTool(null)
   }
 
@@ -1292,7 +1306,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
     const { r1, r2, c1 } = scope
     const affected: RangeBox = { r1, r2, c1, c2: current.cols - 1, rows: r2 - r1 + 1, cols: current.cols - c1 }
     if (current.merges?.some((merge) => rectsOverlap(merge, affected))) {
-      toast('分列区域所在行包含合并单元格，请先取消合并', 'error')
+      toast(t('分列区域所在行包含合并单元格，请先取消合并'), 'error')
       return
     }
     const cells = { ...current.cells }
@@ -1325,14 +1339,14 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
       })
     }
     if (!splitRows) {
-      toast('没有找到可拆分的内容，请检查分隔符', 'info')
+      toast(t('没有找到可拆分的内容，请检查分隔符'), 'info')
       return
     }
     updateWithHistory(current, {
       cells,
       cols: Math.max(current.cols + widest - 1, c1 + widest + 2),
     })
-    toast(`已拆分 ${splitRows} 行，最多拆成 ${widest} 列`, 'success')
+    toast(t('已拆分 {rows} 行，最多拆成 {cols} 列', { rows: splitRows, cols: widest }), 'success')
     setDataTool(null)
   }
 
@@ -1352,7 +1366,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
       else seen.add(key)
     }
     if (!removed.size) {
-      toast('没有发现重复项', 'info')
+      toast(t('没有发现重复项'), 'info')
       return
     }
     const removedRows = Array.from(removed).sort((a, b) => a - b)
@@ -1440,7 +1454,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
         current.cols,
       ),
     )
-    toast(`已删除 ${removed.size} 行重复项`, 'success')
+    toast(t('已删除 {n} 行重复项', { n: removed.size }), 'success')
     setDataTool(null)
   }
 
@@ -1463,14 +1477,14 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
     const current = liveTab()
     if (guardProtected(current)) return
     updateWithHistory(current, { conditional: [...(current.conditional ?? []), rule] })
-    toast('条件格式已启用', 'success')
+    toast(t('条件格式已启用'), 'success')
   }
 
   const removeConditional = (id: string) => {
     const current = liveTab()
     if (guardProtected(current)) return
     updateWithHistory(current, { conditional: (current.conditional ?? []).filter((rule) => rule.id !== id) })
-    toast('规则已删除')
+    toast(t('规则已删除'))
   }
 
   const chartTitleFor = (
@@ -1488,14 +1502,20 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
     }
     const named = headers.filter(Boolean)
     const suffix =
-      kind === 'line' || kind === 'area' ? '趋势' : kind === 'pie' ? '构成' : kind === 'donut' ? '占比' : '对比'
+      kind === 'line' || kind === 'area'
+        ? t('趋势')
+        : kind === 'pie'
+          ? t('构成')
+          : kind === 'donut'
+            ? t('占比')
+            : t('对比')
     if (named.length === 1) return `${named[0]} ${suffix}`
     if (named.length > 1) {
       if (kind === 'pie' || kind === 'donut') return `${named[0]} ${suffix}`
       return `${named[0]}–${named[named.length - 1]} ${suffix}`
     }
     const category = headerCol && headerRow ? cellText(current, evaluatorNow, box.r1, box.c1) : ''
-    return category ? `${category} ${suffix}` : `${CHART_KIND_LABELS[kind]}`
+    return category ? `${category} ${suffix}` : t(CHART_KIND_LABELS[kind])
   }
 
   const openChartCreator = (kind: SheetChartKind = 'column') => {
@@ -1538,7 +1558,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
     updateWithHistory(current, { charts: next })
     setChartEditor(null)
     setView('dashboard')
-    toast(exists ? '图表已更新' : '图表已加入看板', 'success')
+    toast(exists ? t('图表已更新') : t('图表已加入看板'), 'success')
   }
 
   const removeChart = (chart: SheetChart) => {
@@ -1546,7 +1566,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
     if (guardProtected(current)) return
     updateWithHistory(current, { charts: (current.charts ?? []).filter((item) => item.id !== chart.id) })
     setChartToDelete(null)
-    toast('图表已删除')
+    toast(t('图表已删除'))
   }
 
   const openComment = (pos?: CellPos) => {
@@ -1559,7 +1579,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
     }
     const box = toRange(selectionRef.current, current.rows, current.cols)
     if (box.rows > 1 || box.cols > 1) {
-      toast('请先选中一个单元格，再添加批注', 'info')
+      toast(t('请先选中一个单元格，再添加批注'), 'info')
       return
     }
     setCommentCell({ ...selectionRef.current.anchor })
@@ -1575,7 +1595,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
     else delete comments[key]
     updateWithHistory(current, { comments: Object.keys(comments).length ? comments : undefined })
     setCommentCell(null)
-    toast('批注已保存', 'success')
+    toast(t('批注已保存'), 'success')
   }
 
   const deleteComment = (target?: CellPos) => {
@@ -1589,7 +1609,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
     delete comments[key]
     updateWithHistory(current, { comments: Object.keys(comments).length ? comments : undefined })
     setCommentCell(null)
-    toast('已删除批注')
+    toast(t('已删除批注'))
   }
 
   const jumpToNextComment = () => {
@@ -1598,14 +1618,14 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
       .map((key) => key.split(':').map(Number) as [number, number])
       .sort((a, b) => a[0] - b[0] || a[1] - b[1])
     if (!entries.length) {
-      toast('这张工作表还没有批注', 'info')
+      toast(t('这张工作表还没有批注'), 'info')
       return
     }
     const anchor = selectionRef.current.anchor
     const next =
       entries.find(([row, col]) => row > anchor.row || (row === anchor.row && col > anchor.col)) ?? entries[0]
     setSingleSelection(next[0], next[1])
-    toast(`已跳到 ${colToName(next[1])}${next[0] + 1} 的批注`, 'success')
+    toast(t('已跳到 {ref} 的批注', { ref: `${colToName(next[1])}${next[0] + 1}` }), 'success')
   }
 
   const setProtection = (next: boolean) => {
@@ -1614,7 +1634,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
     pushHistoryFor(current)
     updateSheetTab(sheetRef.current.id, tabIndexRef.current, (value) => ({ ...value, protected: next }))
     setProtectPrompt(false)
-    toast(next ? '工作表已保护，单元格编辑已锁定' : '已取消工作表保护', 'success')
+    toast(next ? t('工作表已保护，单元格编辑已锁定') : t('已取消工作表保护'), 'success')
   }
 
   const stepZoom = (direction: 1 | -1) => {
@@ -1955,9 +1975,9 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
     try {
       const blob = await workbookToXlsxBlob(sheetRef.current.tabs)
       downloadBlob(blob, safeFilename(sheetRef.current.title, 'xlsx'))
-      toast('已导出 Excel 工作簿', 'success')
+      toast(t('已导出 Excel 工作簿'), 'success')
     } catch (error) {
-      toast((error as Error).message || '导出失败', 'error')
+      toast((error as Error).message || t('导出失败'), 'error')
     } finally {
       setExporting(false)
     }
@@ -1968,11 +1988,11 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
     const current = sheetRef.current
     const active = current.tabs[tabIndexRef.current]
     downloadText(tabToCsv(active), safeFilename(`${current.title}-${active.name}`, 'csv'), 'text/csv')
-    toast('已导出当前工作表为 CSV', 'success')
+    toast(t('已导出当前工作表为 CSV'), 'success')
   }
 
   const detailText = (() => {
-    const pieces: string[] = [`${range.rows * range.cols} 格`]
+    const pieces: string[] = [t('{n} 格', { n: range.rows * range.cols })]
     if (range.rows * range.cols > 1) {
       let numbers = 0
       let sum = 0
@@ -1986,8 +2006,8 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
         }
       }
       if (numbers > 0) {
-        pieces.push(`求和 ${formatCellNumber(sum, 'general')}`)
-        pieces.push(`平均 ${formatCellNumber(sum / numbers, 'general')}`)
+        pieces.push(t('求和 {value}', { value: formatCellNumber(sum, 'general') }))
+        pieces.push(t('平均 {value}', { value: formatCellNumber(sum / numbers, 'general') }))
       }
     }
     return pieces.join(' · ')
@@ -2010,22 +2030,22 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                 event.currentTarget.blur()
               }
             }}
-            aria-label="表格标题"
+            aria-label={t('表格标题')}
             spellCheck={false}
           />
           <div className="sheet-meta">
-            <span>{sheet.tabs.length} 个工作表</span>
+            <span>{t('{n} 个工作表', { n: sheet.tabs.length })}</span>
             <span className="sheet-meta-sep" />
-            <span>{contentRows} 行有内容</span>
+            <span>{t('{n} 行有内容', { n: contentRows })}</span>
             <span className="sheet-meta-sep" />
             <span className="sheet-meta-save">
               <span className="dot" />
-              自动保存在本机
+              {t('自动保存在本机')}
             </span>
           </div>
         </div>
         <div className="sheet-head-actions">
-          <div className="segmented sheet-view-switch" role="group" aria-label="表格视图">
+          <div className="segmented sheet-view-switch" role="group" aria-label={t('表格视图')}>
             <button
               type="button"
               className={view === 'grid' ? 'active' : undefined}
@@ -2033,7 +2053,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
               onClick={() => setView('grid')}
             >
               <Table2 size={13} />
-              <span>表格</span>
+              <span>{t('表格')}</span>
             </button>
             <button
               type="button"
@@ -2042,7 +2062,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
               onClick={() => setView('dashboard')}
             >
               <LayoutDashboard size={13} />
-              <span>看板</span>
+              <span>{t('看板')}</span>
               {(tab.charts?.length ?? 0) > 0 && <em className="sheet-view-count">{tab.charts?.length}</em>}
             </button>
           </div>
@@ -2050,24 +2070,24 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
             type="button"
             className="sheet-ai-btn"
             onClick={() => openAiTask()}
-            title="打开 AI 任务窗口，让 AI 处理当前表格"
+            title={t('打开 AI 任务窗口，让 AI 处理当前表格')}
           >
             <Sparkles size={14} />
-            AI 任务
+            {t('AI 任务')}
           </button>
           <Dropdown
             className="sheet-export-btn"
             trigger={
               <>
                 <Download size={14} />
-                导出
+                {t('导出')}
                 <ChevronDown size={12} />
               </>
             }
           >
             {(close) => (
               <>
-                <div className="menu-label">导出工作簿</div>
+                <div className="menu-label">{t('导出工作簿')}</div>
                 <button
                   type="button"
                   className="menu-item"
@@ -2078,7 +2098,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   disabled={exporting}
                 >
                   <FileSpreadsheet size={15} />
-                  Excel 工作簿（.xlsx）
+                  {t('Excel 工作簿（.xlsx）')}
                 </button>
                 <button
                   type="button"
@@ -2089,7 +2109,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   }}
                 >
                   <FileDown size={15} />
-                  当前表 CSV
+                  {t('当前表 CSV')}
                 </button>
                 <div className="menu-sep" />
                 <button
@@ -2101,7 +2121,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   }}
                 >
                   <Trash2 size={15} />
-                  删除这张表格
+                  {t('删除这张表格')}
                 </button>
               </>
             )}
@@ -2111,15 +2131,15 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
 
       {view === 'grid' && (
         <>
-      <div className="sheet-toolbar" role="toolbar" aria-label="表格格式">
+      <div className="sheet-toolbar" role="toolbar" aria-label={t('表格格式')}>
         <div className="sheet-tool-group">
           <button
             type="button"
             className="sheet-tool-btn"
             onClick={handleUndo}
             disabled={!historyRef.current.get(tab.id)?.undo.length}
-            title="撤销（Ctrl+Z）"
-            aria-label="撤销"
+            title={t('撤销（Ctrl+Z）')}
+            aria-label={t('撤销')}
           >
             <Undo2 size={15} />
           </button>
@@ -2128,8 +2148,8 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
             className="sheet-tool-btn"
             onClick={handleRedo}
             disabled={!historyRef.current.get(tab.id)?.redo.length}
-            title="重做（Ctrl+Shift+Z）"
-            aria-label="重做"
+            title={t('重做（Ctrl+Shift+Z）')}
+            aria-label={t('重做')}
           >
             <Redo2 size={15} />
           </button>
@@ -2140,7 +2160,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
             className="sheet-tool-btn sheet-tool-drop"
             align="left"
             portal
-            title="排序"
+            title={t('排序')}
             trigger={
               <>
                 <ArrowDownUp size={14} />
@@ -2150,7 +2170,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
           >
             {(close) => (
               <>
-                <div className="menu-label">按 {colToName(selection.anchor.col)} 列排序</div>
+                <div className="menu-label">{t('按 {col} 列排序', { col: colToName(selection.anchor.col) })}</div>
                 <button
                   type="button"
                   className="menu-item"
@@ -2160,7 +2180,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   }}
                 >
                   <ArrowDownUp size={14} />
-                  升序排列
+                  {t('升序排列')}
                 </button>
                 <button
                   type="button"
@@ -2171,9 +2191,9 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   }}
                 >
                   <ArrowDownUp size={14} style={{ transform: 'scaleY(-1)' }} />
-                  降序排列
+                  {t('降序排列')}
                 </button>
-                <p className="sheet-menu-hint">单选单元格时会自动识别整张表与表头。</p>
+                <p className="sheet-menu-hint">{t('单选单元格时会自动识别整张表与表头。')}</p>
               </>
             )}
           </Dropdown>
@@ -2181,8 +2201,8 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
             type="button"
             className={cn('sheet-tool-btn', filterActive && 'active')}
             onClick={openFilter}
-            title="筛选（Ctrl+Shift+L）"
-            aria-label="筛选"
+            title={t('筛选（Ctrl+Shift+L）')}
+            aria-label={t('筛选')}
             aria-pressed={filterActive}
           >
             <Filter size={14} />
@@ -2192,7 +2212,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
             className={cn('sheet-tool-btn sheet-tool-drop', ((tab.freeze?.rows ?? 0) > 0 || (tab.freeze?.cols ?? 0) > 0) && 'active')}
             align="left"
             portal
-            title="冻结窗格"
+            title={t('冻结窗格')}
             trigger={
               <>
                 <Snowflake size={14} />
@@ -2202,7 +2222,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
           >
             {(close) => (
               <>
-                <div className="menu-label">冻结窗格</div>
+                <div className="menu-label">{t('冻结窗格')}</div>
                 <button
                   type="button"
                   className="menu-item"
@@ -2212,7 +2232,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   }}
                 >
                   <Snowflake size={14} />
-                  冻结首行
+                  {t('冻结首行')}
                 </button>
                 <button
                   type="button"
@@ -2223,7 +2243,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   }}
                 >
                   <Snowflake size={14} />
-                  冻结首列
+                  {t('冻结首列')}
                 </button>
                 <button
                   type="button"
@@ -2234,7 +2254,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   }}
                 >
                   <Snowflake size={14} />
-                  冻结首行和首列
+                  {t('冻结首行和首列')}
                 </button>
                 <button
                   type="button"
@@ -2245,7 +2265,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   }}
                 >
                   <Snowflake size={14} />
-                  冻结至当前单元格
+                  {t('冻结至当前单元格')}
                 </button>
                 <div className="menu-sep" />
                 <button
@@ -2257,7 +2277,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                     applyFreeze(0, 0)
                   }}
                 >
-                  取消冻结
+                  {t('取消冻结')}
                 </button>
               </>
             )}
@@ -2269,8 +2289,8 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
               Boolean(mergeCover.get(cellKey(selection.anchor.row, selection.anchor.col))) && 'active',
             )}
             onClick={toggleMerge}
-            title="合并 / 取消合并单元格"
-            aria-label="合并单元格"
+            title={t('合并 / 取消合并单元格')}
+            aria-label={t('合并单元格')}
           >
             <Merge size={14} />
           </button>
@@ -2278,7 +2298,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
             className={cn('sheet-tool-btn sheet-tool-drop', (tab.conditional?.length ?? 0) > 0 && 'active')}
             align="left"
             portal
-            title="条件格式"
+            title={t('条件格式')}
             trigger={
               <>
                 <Paintbrush size={14} />
@@ -2288,7 +2308,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
           >
             {(close) => (
               <>
-                <div className="menu-label">快速添加</div>
+                <div className="menu-label">{t('快速添加')}</div>
                 {(
                   [
                     ['dataBar', '数据条'],
@@ -2309,7 +2329,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                     }}
                   >
                     <Paintbrush size={14} />
-                    {label}
+                    {t(label)}
                   </button>
                 ))}
                 <div className="menu-sep" />
@@ -2321,31 +2341,32 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                     openConditional('dataBar')
                   }}
                 >
-                  管理全部规则{tab.conditional?.length ? `（${tab.conditional.length}）` : ''}
+                  {t('管理全部规则')}
+                  {tab.conditional?.length ? t('（{n}）', { n: tab.conditional.length }) : ''}
                 </button>
               </>
             )}
           </Dropdown>
-          <button type="button" className="sheet-chart-insert-btn" onClick={() => openChartCreator()} title="从当前选区插入图表">
+          <button type="button" className="sheet-chart-insert-btn" onClick={() => openChartCreator()} title={t('从当前选区插入图表')}>
             <ChartColumn size={14} />
-            图表
+            {t('图表')}
           </button>
           <Dropdown
             className="sheet-data-btn"
             align="left"
             portal
-            title="数据工具"
+            title={t('数据工具')}
             trigger={
               <>
                 <Database size={14} />
-                数据
+                {t('数据')}
                 <ChevronDown size={10} />
               </>
             }
           >
             {(close) => (
               <>
-                <div className="menu-label">数据工具</div>
+                <div className="menu-label">{t('数据工具')}</div>
                 <button
                   type="button"
                   className="menu-item"
@@ -2355,7 +2376,8 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   }}
                 >
                   <ListChecks size={14} />
-                  数据有效性…{tab.validations?.length ? `（${tab.validations.length}）` : ''}
+                  {t('数据有效性…')}
+                  {tab.validations?.length ? t('（{n}）', { n: tab.validations.length }) : ''}
                 </button>
                 <button
                   type="button"
@@ -2366,7 +2388,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   }}
                 >
                   <SplitSquareHorizontal size={14} />
-                  文本分列…
+                  {t('文本分列…')}
                 </button>
                 <div className="menu-sep" />
                 <button
@@ -2378,10 +2400,10 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   }}
                 >
                   <CopyX size={14} />
-                  删除重复项…
+                  {t('删除重复项…')}
                 </button>
                 <p className="sheet-menu-hint">
-                  有效性会校验输入并显示下拉箭头；分列和去重会修改数据，可用撤销恢复。
+                  {t('有效性会校验输入并显示下拉箭头；分列和去重会修改数据，可用撤销恢复。')}
                 </p>
               </>
             )}
@@ -2390,18 +2412,18 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
             className={cn('sheet-data-btn', commentCount > 0 && 'active')}
             align="left"
             portal
-            title="审阅"
+            title={t('审阅')}
             trigger={
               <>
                 <MessageSquare size={14} />
-                审阅
+                {t('审阅')}
                 <ChevronDown size={10} />
               </>
             }
           >
             {(close) => (
               <>
-                <div className="menu-label">批注</div>
+                <div className="menu-label">{t('批注')}</div>
                 <button
                   type="button"
                   className="menu-item"
@@ -2411,7 +2433,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   }}
                 >
                   <MessageSquarePlus size={14} />
-                  添加或编辑批注…
+                  {t('添加或编辑批注…')}
                 </button>
                 <button
                   type="button"
@@ -2423,7 +2445,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   }}
                 >
                   <Trash2 size={14} />
-                  删除当前批注
+                  {t('删除当前批注')}
                 </button>
                 <button
                   type="button"
@@ -2434,10 +2456,11 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   }}
                 >
                   <MessageSquare size={14} />
-                  下一处批注{commentCount ? `（${commentCount}）` : ''}
+                  {t('下一处批注')}
+                  {commentCount ? t('（{n}）', { n: commentCount }) : ''}
                 </button>
                 <div className="menu-sep" />
-                <div className="menu-label">工作表</div>
+                <div className="menu-label">{t('工作表')}</div>
                 <button
                   type="button"
                   className={cn('menu-item', tab.protected && 'selected')}
@@ -2448,12 +2471,12 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   }}
                 >
                   {tab.protected ? <LockOpen size={14} /> : <Lock size={14} />}
-                  {tab.protected ? '取消工作表保护' : '保护工作表…'}
+                  {tab.protected ? t('取消工作表保护') : t('保护工作表…')}
                 </button>
                 <p className="sheet-menu-hint">
                   {tab.protected
-                    ? '已锁定单元格编辑、格式、排序和合并；视图与筛选仍可使用。'
-                    : '保护后其他人无法改内容，适合分发给同事填写。'}
+                    ? t('已锁定单元格编辑、格式、排序和合并；视图与筛选仍可使用。')
+                    : t('保护后其他人无法改内容，适合分发给同事填写。')}
                 </p>
               </>
             )}
@@ -2462,18 +2485,18 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
             className={cn('sheet-data-btn', (crosshair || eyeCare) && 'active')}
             align="left"
             portal
-            title="视图"
+            title={t('视图')}
             trigger={
               <>
                 <Eye size={14} />
-                视图
+                {t('视图')}
                 <ChevronDown size={10} />
               </>
             }
           >
             {(close) => (
               <>
-                <div className="menu-label">阅读辅助</div>
+                <div className="menu-label">{t('阅读辅助')}</div>
                 <button
                   type="button"
                   className={cn('menu-item', crosshair && 'selected')}
@@ -2483,7 +2506,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   }}
                 >
                   <Crosshair size={14} />
-                  高亮当前行列
+                  {t('高亮当前行列')}
                   {crosshair && <Check size={13} className="menu-item-check" />}
                 </button>
                 <button
@@ -2495,11 +2518,11 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   }}
                 >
                   <Leaf size={14} />
-                  护眼模式
+                  {t('护眼模式')}
                   {eyeCare && <Check size={13} className="menu-item-check" />}
                 </button>
                 <div className="menu-sep" />
-                <div className="menu-label">显示比例</div>
+                <div className="menu-label">{t('显示比例')}</div>
                 {ZOOM_LEVELS.map((level) => (
                   <button
                     key={level}
@@ -2524,8 +2547,8 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
             type="button"
             className={cn('sheet-tool-btn', anchorStyle.bold && 'active')}
             onClick={() => applyStyle({ bold: !anchorStyle.bold })}
-            title="加粗（Ctrl+B）"
-            aria-label="加粗"
+            title={t('加粗（Ctrl+B）')}
+            aria-label={t('加粗')}
             aria-pressed={!!anchorStyle.bold}
           >
             <Bold size={15} />
@@ -2534,8 +2557,8 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
             type="button"
             className={cn('sheet-tool-btn', anchorStyle.italic && 'active')}
             onClick={() => applyStyle({ italic: !anchorStyle.italic })}
-            title="斜体（Ctrl+I）"
-            aria-label="斜体"
+            title={t('斜体（Ctrl+I）')}
+            aria-label={t('斜体')}
             aria-pressed={!!anchorStyle.italic}
           >
             <Italic size={15} />
@@ -2544,8 +2567,8 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
             type="button"
             className={cn('sheet-tool-btn', anchorStyle.wrap && 'active')}
             onClick={() => applyStyle({ wrap: anchorStyle.wrap ? null : true })}
-            title="自动换行"
-            aria-label="自动换行"
+            title={t('自动换行')}
+            aria-label={t('自动换行')}
             aria-pressed={!!anchorStyle.wrap}
           >
             <WrapText size={15} />
@@ -2557,8 +2580,8 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
             type="button"
             className={cn('sheet-tool-btn', anchorAlign === 'left' && 'active')}
             onClick={() => applyStyle({ align: 'left' })}
-            title="左对齐"
-            aria-label="左对齐"
+            title={t('左对齐')}
+            aria-label={t('左对齐')}
           >
             <AlignLeft size={15} />
           </button>
@@ -2566,8 +2589,8 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
             type="button"
             className={cn('sheet-tool-btn', anchorAlign === 'center' && 'active')}
             onClick={() => applyStyle({ align: 'center' })}
-            title="居中对齐"
-            aria-label="居中对齐"
+            title={t('居中对齐')}
+            aria-label={t('居中对齐')}
           >
             <AlignCenter size={15} />
           </button>
@@ -2575,8 +2598,8 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
             type="button"
             className={cn('sheet-tool-btn', anchorAlign === 'right' && 'active')}
             onClick={() => applyStyle({ align: 'right' })}
-            title="右对齐"
-            aria-label="右对齐"
+            title={t('右对齐')}
+            aria-label={t('右对齐')}
           >
             <AlignRight size={15} />
           </button>
@@ -2589,12 +2612,12 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
             const value = event.target.value as NumberFormat
             applyStyle({ fmt: value === 'general' ? null : value })
           }}
-          title="数字格式"
-          aria-label="数字格式"
+          title={t('数字格式')}
+          aria-label={t('数字格式')}
         >
           {NUMBER_FORMATS.map((item) => (
             <option key={item.value} value={item.value}>
-              {item.label}
+              {t(item.label)}
             </option>
           ))}
         </select>
@@ -2610,7 +2633,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
               <ChevronDown size={10} />
             </>
           }
-          title="文字颜色"
+          title={t('文字颜色')}
         >
           {(close) => (
             <div className="sheet-color-menu">
@@ -2622,7 +2645,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                     className="sheet-color-swatch"
                     style={{ background: color }}
                     title={color}
-                    aria-label={`文字颜色 ${color}`}
+                    aria-label={t('文字颜色 {color}', { color })}
                     onClick={() => {
                       applyStyle({ color })
                       close()
@@ -2638,7 +2661,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   close()
                 }}
               >
-                恢复默认颜色
+                {t('恢复默认颜色')}
               </button>
             </div>
           )}
@@ -2653,7 +2676,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
               <ChevronDown size={10} />
             </>
           }
-          title="填充颜色"
+          title={t('填充颜色')}
         >
           {(close) => (
             <div className="sheet-color-menu">
@@ -2665,7 +2688,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                     className="sheet-color-swatch"
                     style={{ background: color }}
                     title={color}
-                    aria-label={`填充颜色 ${color}`}
+                    aria-label={t('填充颜色 {color}', { color })}
                     onClick={() => {
                       applyStyle({ bg: color })
                       close()
@@ -2681,22 +2704,22 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   close()
                 }}
               >
-                清除填充
+                {t('清除填充')}
               </button>
             </div>
           )}
         </Dropdown>
         <span className="sheet-tool-sep" />
-        <button type="button" className="sheet-sum-btn" onClick={handleAutoSum} title="对上方连续数字求和">
+        <button type="button" className="sheet-sum-btn" onClick={handleAutoSum} title={t('对上方连续数字求和')}>
           <Sigma size={14} />
-          自动求和
+          {t('自动求和')}
         </button>
         <span className="sheet-tool-spacer" />
-        <div className="sheet-tool-hint">双击编辑 · F2 编辑 · Enter 下移</div>
+        <div className="sheet-tool-hint">{t('双击编辑 · F2 编辑 · Enter 下移')}</div>
       </div>
 
       <div className="sheet-formula">
-        <div className="sheet-addr" title="当前区域">
+        <div className="sheet-addr" title={t('当前区域')}>
           {formatRange(selection.anchor, selection.focus)}
         </div>
         <span className="sheet-fx" aria-hidden="true">
@@ -2715,7 +2738,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
           onBlur={() => {
             if (editingRef.current) finishEdit()
           }}
-          aria-label="公式编辑栏"
+          aria-label={t('公式编辑栏')}
           spellCheck={false}
         />
       </div>
@@ -2728,7 +2751,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
           onKeyDown={handleGridKeyDown}
           onPaste={handlePaste}
           role="grid"
-          aria-label={`${tab.name} 工作表`}
+          aria-label={t('{name} 工作表', { name: tab.name })}
         >
           <div
             className="sheet-grid"
@@ -2738,8 +2761,8 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
               type="button"
               className="sheet-corner"
               onClick={selectAll}
-              title="全选工作表"
-              aria-label="全选工作表"
+              title={t('全选工作表')}
+              aria-label={t('全选工作表')}
               style={{ gridColumn: 1, gridRow: 1 }}
             />
             {Array.from({ length: tab.cols }, (_, col) => {
@@ -2770,7 +2793,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                       autoFitColumn(col)
                     }}
                     role="separator"
-                    aria-label={`调整 ${colToName(col)} 列宽`}
+                    aria-label={t('调整 {col} 列宽', { col: colToName(col) })}
                   />
                 </div>
               )
@@ -2888,7 +2911,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                             onBlur={() => {
                               if (editingRef.current) finishEdit()
                             }}
-                            aria-label={`编辑 ${colToName(col)}${row + 1}`}
+                            aria-label={t('编辑 {ref}', { ref: `${colToName(col)}${row + 1}` })}
                             spellCheck={false}
                           />
                         ) : (
@@ -2904,7 +2927,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                               className="sheet-list-btn"
                               align="left"
                               portal
-                              title="从允许的选项中选择"
+                              title={t('从允许的选项中选择')}
                               trigger={<ChevronDown size={10} />}
                             >
                               {(close) => (
@@ -2919,7 +2942,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                                         commitCells([{ row, col, raw: '' }])
                                       }}
                                     >
-                                      <span className="sheet-list-blank">（空白）</span>
+                                      <span className="sheet-list-blank">{t('（空白）')}</span>
                                     </button>
                                   )}
                                   {listRule.list.map((option) => (
@@ -2952,8 +2975,8 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                               setFilterCol(col)
                               setFilterOpen(true)
                             }}
-                            title={`筛选 ${colToName(col)} 列`}
-                            aria-label={`筛选 ${colToName(col)} 列`}
+                            title={t('筛选 {col} 列', { col: colToName(col) })}
+                            aria-label={t('筛选 {col} 列', { col: colToName(col) })}
                           >
                             <Filter size={10} />
                             {filterRule && <i />}
@@ -2965,7 +2988,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                             role="button"
                             tabIndex={-1}
                             title={comment}
-                            aria-label={`${colToName(col)}${row + 1} 的批注：${comment}`}
+                            aria-label={t('{ref} 的批注：{comment}', { ref: `${colToName(col)}${row + 1}`, comment })}
                             onMouseDown={(event) => event.stopPropagation()}
                             onDoubleClick={(event) => event.stopPropagation()}
                             onClick={(event) => {
@@ -3000,7 +3023,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
       )}
 
       <div className="sheet-tabbar">
-        <div className="sheet-tabs" role="tablist" aria-label="工作表">
+        <div className="sheet-tabs" role="tablist" aria-label={t('工作表')}>
           {sheet.tabs.map((item, index) => {
             const active = index === tabIndex
             return (
@@ -3021,7 +3044,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                         setRenamingTab(false)
                       }
                     }}
-                    aria-label="重命名工作表"
+                    aria-label={t('重命名工作表')}
                   />
                 ) : (
                   <button
@@ -3034,7 +3057,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                       setRenameDraft(item.name)
                       setRenamingTab(true)
                     }}
-                    title="双击重命名"
+                    title={t('双击重命名')}
                   >
                     {item.name}
                   </button>
@@ -3042,7 +3065,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
               </div>
             )
           })}
-          <button type="button" className="sheet-tab-add" onClick={addTab} title="新增工作表" aria-label="新增工作表">
+          <button type="button" className="sheet-tab-add" onClick={addTab} title={t('新增工作表')} aria-label={t('新增工作表')}>
             <Plus size={14} />
           </button>
         </div>
@@ -3050,7 +3073,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
           <Dropdown
             className="sheet-tab-menu-btn"
             trigger={<MoreHorizontal size={15} />}
-            title="工作表操作"
+            title={t('工作表操作')}
           >
             {(close) => (
               <>
@@ -3064,7 +3087,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   }}
                 >
                   <FileSpreadsheet size={14} />
-                  重命名工作表
+                  {t('重命名工作表')}
                 </button>
                 <button
                   type="button"
@@ -3075,7 +3098,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   }}
                 >
                   <Plus size={14} />
-                  复制工作表
+                  {t('复制工作表')}
                 </button>
                 <div className="menu-sep" />
                 <button
@@ -3088,7 +3111,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
                   }}
                 >
                   <Trash2 size={14} />
-                  删除工作表
+                  {t('删除工作表')}
                 </button>
               </>
             )}
@@ -3097,12 +3120,15 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
       </div>
 
       <footer className="sheet-status">
-        <span className="sheet-status-address">{view === 'dashboard' ? '智能看板' : formatRange(selection.anchor, selection.focus)}</span>
+        <span className="sheet-status-address">{view === 'dashboard' ? t('智能看板') : formatRange(selection.anchor, selection.focus)}</span>
         <span className="sheet-status-detail">
           {view === 'dashboard'
-            ? `${tab.charts?.length ?? 0} 张图表 · 指标自动汇总`
+            ? t('{n} 张图表 · 指标自动汇总', { n: tab.charts?.length ?? 0 })
             : filterActive && activeFilter
-              ? `筛选后保留 ${Math.max(0, activeFilter.r2 - activeFilter.r1 - hiddenRows.size)} 行 · 已隐藏 ${hiddenRows.size} 行`
+              ? t('筛选后保留 {visible} 行 · 已隐藏 {hidden} 行', {
+                  visible: Math.max(0, activeFilter.r2 - activeFilter.r1 - hiddenRows.size),
+                  hidden: hiddenRows.size,
+                })
               : detailText}
         </span>
         <span className="sheet-status-spacer" />
@@ -3111,21 +3137,21 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
             type="button"
             className="sheet-protect-badge"
             onClick={() => setProtectPrompt(true)}
-            title="工作表已保护，点击管理保护状态"
+            title={t('工作表已保护，点击管理保护状态')}
           >
             <Lock size={11} />
-            已保护
+            {t('已保护')}
           </button>
         )}
         {view === 'grid' && (
-          <span className="sheet-zoom" aria-label="显示比例">
+          <span className="sheet-zoom" aria-label={t('显示比例')}>
             <button
               type="button"
               className="sheet-zoom-btn"
               onClick={() => stepZoom(-1)}
               disabled={zoom <= ZOOM_LEVELS[0]}
-              title="缩小"
-              aria-label="缩小"
+              title={t('缩小')}
+              aria-label={t('缩小')}
             >
               <ZoomOut size={12} />
             </button>
@@ -3133,7 +3159,7 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
               type="button"
               className="sheet-zoom-value"
               onClick={() => setZoom(1)}
-              title="恢复 100%"
+              title={t('恢复 100%')}
             >
               {Math.round(zoom * 100)}%
             </button>
@@ -3142,8 +3168,8 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
               className="sheet-zoom-btn"
               onClick={() => stepZoom(1)}
               disabled={zoom >= ZOOM_LEVELS[ZOOM_LEVELS.length - 1]}
-              title="放大"
-              aria-label="放大"
+              title={t('放大')}
+              aria-label={t('放大')}
             >
               <ZoomIn size={12} />
             </button>
@@ -3151,10 +3177,10 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
         )}
         <span className="sheet-status-sep" />
         <span>
-          {view === 'dashboard' ? `${tab.name} · BI` : `${tab.rows} 行 × ${tab.cols} 列`}
+          {view === 'dashboard' ? `${tab.name} · BI` : t('{rows} 行 × {cols} 列', { rows: tab.rows, cols: tab.cols })}
         </span>
         <span className="sheet-status-sep" />
-        <span>本地工作簿</span>
+        <span>{t('本地工作簿')}</span>
       </footer>
 
       <ChartDialog
@@ -3218,21 +3244,21 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
       />
       <ConfirmDialog
         open={protectPrompt}
-        title={tab.protected ? '取消工作表保护？' : '保护这张工作表？'}
+        title={tab.protected ? t('取消工作表保护？') : t('保护这张工作表？')}
         description={
           tab.protected
-            ? '取消保护后，单元格内容、格式、排序和合并操作会重新开放。'
-            : '保护后不能修改单元格内容、格式、排序和合并；筛选、冻结与视图切换仍然可用。'
+            ? t('取消保护后，单元格内容、格式、排序和合并操作会重新开放。')
+            : t('保护后不能修改单元格内容、格式、排序和合并；筛选、冻结与视图切换仍然可用。')
         }
-        confirmText={tab.protected ? '取消保护' : '开启保护'}
+        confirmText={tab.protected ? t('取消保护') : t('开启保护')}
         onConfirm={() => setProtection(!tab.protected)}
         onClose={() => setProtectPrompt(false)}
       />
       <ConfirmDialog
         open={Boolean(chartToDelete)}
-        title="删除这张图表？"
-        description={chartToDelete ? `「${chartToDelete.title}」会从看板中移除，原始数据不会受影响。` : ''}
-        confirmText="删除图表"
+        title={t('删除这张图表？')}
+        description={chartToDelete ? t('「{name}」会从看板中移除，原始数据不会受影响。', { name: chartToDelete.title }) : ''}
+        confirmText={t('删除图表')}
         onConfirm={() => {
           if (chartToDelete) removeChart(chartToDelete)
         }}
@@ -3240,20 +3266,20 @@ export function SheetWorkbook({ sheet }: { sheet: SheetRecord }) {
       />
       <ConfirmDialog
         open={confirmDeleteSheet}
-        title="删除这张表格？"
-        description={`「${sheet.title}」及其全部工作表将从本机移除，此操作不可撤销。`}
-        confirmText="删除表格"
+        title={t('删除这张表格？')}
+        description={t('「{name}」及其全部工作表将从本机移除，此操作不可撤销。', { name: sheet.title })}
+        confirmText={t('删除表格')}
         onConfirm={() => {
           deleteFile('sheet', sheet.id)
-          toast('表格已删除')
+          toast(t('表格已删除'))
         }}
         onClose={() => setConfirmDeleteSheet(false)}
       />
       <ConfirmDialog
         open={confirmDeleteTab}
-        title="删除这个工作表？"
-        description={`「${tab.name}」中的内容会被移除，其他工作表不受影响。`}
-        confirmText="删除工作表"
+        title={t('删除这个工作表？')}
+        description={t('「{name}」中的内容会被移除，其他工作表不受影响。', { name: tab.name })}
+        confirmText={t('删除工作表')}
         onConfirm={deleteTab}
         onClose={() => setConfirmDeleteTab(false)}
       />

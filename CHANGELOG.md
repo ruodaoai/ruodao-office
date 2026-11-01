@@ -17,12 +17,14 @@
 - **AI 助手**：支持 DeepSeek、任意 OpenAI 兼容接口、本机 Ollama 与若道账号四种接入方式；提供摘要、改写、翻译、续写与要点提取。
 - **多人协作**：基于 Yjs 的实时协同，配套自建 WebSocket 房间服务（`npm run collab`），支持在线成员列表、增量同步与空闲房间回收。
 - **数据管理**：IndexedDB 本地存储，整包 JSON 备份导出 / 导入，AI 密钥不写入备份。
+- **多语言界面**：完整支持简体中文与 English，设置 → 通用 中一键切换，无需重启；新安装跟随系统语言，按设备记忆。文档与 README 亦提供中英双版。
 
 ### 工程
 
 - 新增桌面启动器 `scripts/desktop.mjs`：自动挑选空闲端口、剔除 `ELECTRON_RUN_AS_NODE` 干扰、关闭窗口时清理开发服务器。
 - 新增 Windows 打包脚本，产出安装版（NSIS）与免安装版（Portable）。
-- 新增 `scripts/screenshots.mjs`，一键生成本文档使用的界面截图。
+- 新增 `scripts/screenshots.mjs`，支持 `SHOT_LOCALE=en` 一键生成中英文两套界面截图。
+- 新增 `README.en.md` 英文版说明，README 顶部可切换语言。
 
 ### 已知问题
 

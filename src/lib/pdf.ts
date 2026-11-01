@@ -2,6 +2,7 @@ import * as pdfjs from 'pdfjs-dist'
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
 import type { Paragraph as DocxParagraph } from 'docx'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+import { t } from '../i18n'
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
 
@@ -90,7 +91,7 @@ async function renderPageProxy(page: PDFPageProxy, scale: number): Promise<HTMLC
   canvas.width = Math.max(1, Math.floor(viewport.width))
   canvas.height = Math.max(1, Math.floor(viewport.height))
   const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('无法创建画布')
+  if (!ctx) throw new Error(t('无法创建画布'))
   ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
   await page.render({ canvasContext: ctx, viewport }).promise
@@ -103,7 +104,7 @@ export function canvasToBlob(canvas: HTMLCanvasElement, format: 'png' | 'jpeg', 
     canvas.toBlob(
       (blob) => {
         if (blob) resolve(blob)
-        else reject(new Error('图片生成失败'))
+        else reject(new Error(t('图片生成失败')))
       },
       format === 'png' ? 'image/png' : 'image/jpeg',
       quality,
@@ -176,7 +177,7 @@ export async function extractPdfPages(bytes: Uint8Array, pages: number[]): Promi
   const source = await PDFDocument.load(bytes, { ignoreEncryption: true })
   const output = await PDFDocument.create()
   const selected = pageSelection(pages, source.getPageCount()).map((page) => page - 1)
-  if (!selected.length) throw new Error('请先选择要保留的页面')
+  if (!selected.length) throw new Error(t('请先选择要保留的页面'))
   const copied = await output.copyPages(source, selected)
   copied.forEach((page) => output.addPage(page))
   return output.save()
@@ -187,8 +188,8 @@ export async function removePdfPages(bytes: Uint8Array, pages: number[]): Promis
   const source = await PDFDocument.load(bytes, { ignoreEncryption: true })
   const removed = new Set(pageSelection(pages, source.getPageCount()))
   const keep = source.getPageIndices().filter((index) => !removed.has(index + 1))
-  if (!keep.length) throw new Error('不能删除全部页面')
-  if (keep.length === source.getPageCount()) throw new Error('请先选择要删除的页面')
+  if (!keep.length) throw new Error(t('不能删除全部页面'))
+  if (keep.length === source.getPageCount()) throw new Error(t('请先选择要删除的页面'))
   const output = await PDFDocument.create()
   const copied = await output.copyPages(source, keep)
   copied.forEach((page) => output.addPage(page))
@@ -223,7 +224,10 @@ export async function splitPdf(
     const copied = await output.copyPages(source, part.map((page) => page - 1))
     copied.forEach((page) => output.addPage(page))
     chunks.push({
-      label: part.length === 1 ? `第${part[0]}页` : `第${part[0]}-${part[part.length - 1]}页`,
+      label:
+        part.length === 1
+          ? t('第{page}页', { page: part[0] })
+          : t('第{from}-{to}页', { from: part[0], to: part[part.length - 1] }),
       pages: part,
       bytes: await output.save(),
     })
@@ -241,7 +245,7 @@ function drawWatermarkCanvas(
   canvas.width = Math.max(1, Math.round(width * ratio))
   canvas.height = Math.max(1, Math.round(height * ratio))
   const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('无法创建水印图层')
+  if (!ctx) throw new Error(t('无法创建水印图层'))
   ctx.scale(ratio, ratio)
   ctx.globalAlpha = options.opacity
   ctx.fillStyle = options.color
@@ -343,7 +347,7 @@ export async function stampPdfImage(
   const doc = await PDFDocument.load(bytes, { ignoreEncryption: true })
   const image = await doc.embedPng(dataUrl)
   const targets = new Set(pageSelection(pages, doc.getPageCount()))
-  if (!targets.size) throw new Error('请先选择页面')
+  if (!targets.size) throw new Error(t('请先选择页面'))
   const ratio = Math.max(0.08, Math.min(0.7, options.widthRatio))
   const opacity = Math.max(0.1, Math.min(1, options.opacity))
   const margin = options.margin ?? 42
@@ -395,7 +399,7 @@ export async function compressPdf(
 ): Promise<PdfCompressResult> {
   const { PDFDocument } = await import('pdf-lib')
   const targets = new Set(pageSelection(pages, doc.numPages))
-  if (!targets.size) throw new Error('请选择要压缩的页面')
+  if (!targets.size) throw new Error(t('请选择要压缩的页面'))
   const source = await PDFDocument.load(sourceBytes, { ignoreEncryption: true })
   const output = await PDFDocument.create()
   const scale = Math.max(0.5, Math.min(4, options.dpi / 72))
@@ -469,7 +473,7 @@ export async function pdfPagesToDocx(
       children.push(
         new Paragraph({
           heading: HeadingLevel.HEADING_2,
-          children: [new TextRun({ text: `第 ${page.page} 页`, font: 'Microsoft YaHei', size: 28, color: '4D4841' })],
+          children: [new TextRun({ text: t('第 {page} 页', { page: page.page }), font: 'Microsoft YaHei', size: 28, color: '4D4841' })],
           spacing: { before: pageIndex === 0 ? 80 : 320, after: 140 },
         }),
       )
@@ -481,7 +485,7 @@ export async function pdfPagesToDocx(
     if (!lines.length) {
       children.push(
         new Paragraph({
-          children: [new TextRun({ text: '（本页没有可提取的文字层，扫描件请先在本应用内做 OCR。）', italics: true, color: '8D8275' })],
+          children: [new TextRun({ text: t('（本页没有可提取的文字层，扫描件请先在本应用内做 OCR。）'), italics: true, color: '8D8275' })],
         }),
       )
       return
@@ -497,7 +501,7 @@ export async function pdfPagesToDocx(
   })
   const document = new Document({
     title,
-    creator: '若道办公',
+    creator: t('若道办公'),
     styles: {
       default: {
         document: {
@@ -537,14 +541,14 @@ function loadImageSource(file: File): Promise<{ bytes: Uint8Array; width: number
       canvas.height = image.naturalHeight
       const ctx = canvas.getContext('2d')
       if (!ctx) {
-        reject(new Error('无法读取图片'))
+        reject(new Error(t('无法读取图片')))
         return
       }
       ctx.drawImage(image, 0, 0)
       canvas
         .toBlob((blob) => {
           if (!blob) {
-            reject(new Error('图片转换失败'))
+            reject(new Error(t('图片转换失败')))
             return
           }
           blob
@@ -555,7 +559,7 @@ function loadImageSource(file: File): Promise<{ bytes: Uint8Array; width: number
     }
     image.onerror = () => {
       URL.revokeObjectURL(url)
-      reject(new Error('无法读取图片'))
+      reject(new Error(t('无法读取图片')))
     }
     image.src = url
   })
@@ -566,7 +570,7 @@ export async function imagesToPdf(
   pageSize: 'a4' | 'fit',
 ): Promise<Uint8Array> {
   const { PDFDocument } = await import('pdf-lib')
-  if (!files.length) throw new Error('请先选择图片')
+  if (!files.length) throw new Error(t('请先选择图片'))
   const doc = await PDFDocument.create()
   const a4: [number, number] = [595.28, 841.89]
   for (const file of files) {
@@ -623,9 +627,9 @@ export async function ocrPdf(
   const output: Array<{ page: number; text: string; ocr: boolean }> = []
   try {
     for (let index = 0; index < pages.length; index += 1) {
-      if (isCancelled()) throw new Error('已取消识别')
+      if (isCancelled()) throw new Error(t('已取消识别'))
       const pageNumber = pages[index]
-      onProgress({ page: index + 1, pages: pages.length, status: '准备页面', progress: 0 })
+      onProgress({ page: index + 1, pages: pages.length, status: t('准备页面'), progress: 0 })
       if (preferTextLayer) {
         const text = await extractPageText(doc, pageNumber)
         if (text.length >= 24) {
@@ -644,7 +648,7 @@ export async function ocrPdf(
             onProgress({
               page: index + 1,
               pages: pages.length,
-              status: OCR_STATUS[message.status] ?? message.status,
+              status: t(OCR_STATUS[message.status] ?? message.status),
               progress: message.progress,
             })
           },
@@ -668,17 +672,17 @@ function drawCoverPage(ctx: CanvasRenderingContext2D, width: number, height: num
   ctx.fillRect(64, 88, 46, 4)
   ctx.fillStyle = '#8d8275'
   ctx.font = '11px "Microsoft YaHei", sans-serif'
-  ctx.fillText('SERVICE AGREEMENT · 本地生成', 64, 128)
+  ctx.fillText(t('SERVICE AGREEMENT · 本地生成'), 64, 128)
   ctx.fillStyle = '#201e1a'
   ctx.font = '600 38px "Source Han Serif SC", "SimSun", serif'
-  ctx.fillText('服务合同', 64, 210)
+  ctx.fillText(t('服务合同'), 64, 210)
   ctx.font = '12px "Microsoft YaHei", sans-serif'
   ctx.fillStyle = '#4d4841'
   const lines = [
-    '合同编号：RD-2026-017',
-    '甲方：若道科技有限公司',
-    '乙方：示例客户',
-    '生效日期：2026 年 10 月 1 日',
+    t('合同编号：RD-2026-017'),
+    t('甲方：若道科技有限公司'),
+    t('乙方：示例客户'),
+    t('生效日期：2026 年 10 月 1 日'),
   ]
   lines.forEach((line, index) => ctx.fillText(line, 64, 258 + index * 26))
   ctx.strokeStyle = '#e3ded4'
@@ -689,9 +693,9 @@ function drawCoverPage(ctx: CanvasRenderingContext2D, width: number, height: num
   ctx.fillStyle = '#4d4841'
   ctx.font = '12px "Microsoft YaHei", sans-serif'
   const body = [
-    '双方就本地办公软件的使用与维护达成如下约定。',
-    '本文件由若道办公在浏览器内生成，不经过任何服务器。',
-    '可尝试对本文件添加水印、拆分页面，或使用 OCR 识别扫描页。',
+    t('双方就本地办公软件的使用与维护达成如下约定。'),
+    t('本文件由若道办公在浏览器内生成，不经过任何服务器。'),
+    t('可尝试对本文件添加水印、拆分页面，或使用 OCR 识别扫描页。'),
   ]
   body.forEach((line, index) => ctx.fillText(line, 64, 430 + index * 30))
   ctx.fillStyle = '#a29a8e'
@@ -708,16 +712,16 @@ function drawScanPage(ctx: CanvasRenderingContext2D, width: number, height: numb
   ctx.strokeRect(40, 40, width - 80, height - 80)
   ctx.fillStyle = '#201e1a'
   ctx.font = '600 24px "Microsoft YaHei", sans-serif'
-  ctx.fillText('保密条款', 96, 150)
+  ctx.fillText(t('保密条款'), 96, 150)
   ctx.font = '14px "Microsoft YaHei", sans-serif'
   ctx.fillStyle = '#35312b'
   const lines = [
-    '一、双方对在合作过程中获知的商业信息负有保密义务。',
-    '二、未经书面许可，任何一方不得向第三方披露上述信息。',
-    '三、保密义务在合同终止后继续有效，期限为三年。',
-    '四、违反保密义务的一方应承担相应的赔偿责任。',
+    t('一、双方对在合作过程中获知的商业信息负有保密义务。'),
+    t('二、未经书面许可，任何一方不得向第三方披露上述信息。'),
+    t('三、保密义务在合同终止后继续有效，期限为三年。'),
+    t('四、违反保密义务的一方应承担相应的赔偿责任。'),
     '',
-    '本页为扫描件样式，可用于测试本地 OCR 识别能力。',
+    t('本页为扫描件样式，可用于测试本地 OCR 识别能力。'),
   ]
   lines.forEach((line, index) => ctx.fillText(line, 96, 210 + index * 40))
   ctx.strokeStyle = '#c8442b'
@@ -728,9 +732,9 @@ function drawScanPage(ctx: CanvasRenderingContext2D, width: number, height: numb
   ctx.fillStyle = '#c8442b'
   ctx.font = '600 18px "Microsoft YaHei", sans-serif'
   ctx.textAlign = 'center'
-  ctx.fillText('若道办公', width - 190, 636)
+  ctx.fillText(t('若道办公'), width - 190, 636)
   ctx.font = '11px "Microsoft YaHei", sans-serif'
-  ctx.fillText('合同专用章', width - 190, 658)
+  ctx.fillText(t('合同专用章'), width - 190, 658)
   ctx.textAlign = 'left'
   ctx.lineWidth = 1
 }
@@ -746,7 +750,7 @@ async function canvasPageData(
   canvas.width = Math.round(width * 2)
   canvas.height = Math.round(height * 2)
   const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('无法生成示例文件')
+  if (!ctx) throw new Error(t('无法生成示例文件'))
   ctx.scale(2, 2)
   draw(ctx, width, height)
   return canvas.toDataURL(format === 'png' ? 'image/png' : 'image/jpeg', quality)

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import type { SheetChart, SheetChartKind, SheetTab } from '../../types'
 import { Modal } from '../../components/ui'
+import { useT } from '../../i18n'
 import { CHART_KIND_LABELS, buildChartData } from '../../lib/chartData'
 import { formatRange } from '../../lib/sheetRefs'
 import { cn } from '../../lib/utils'
@@ -64,6 +65,7 @@ interface ChartDialogProps {
 }
 
 export function ChartDialog({ open, tab, value, onClose, onSubmit }: ChartDialogProps) {
+  const t = useT()
   const [kind, setKind] = useState<SheetChartKind>('column')
   const [title, setTitle] = useState('')
   const [headerRow, setHeaderRow] = useState(true)
@@ -82,7 +84,7 @@ export function ChartDialog({ open, tab, value, onClose, onSubmit }: ChartDialog
     return {
       id: value.id ?? 'chart-preview',
       kind,
-      title: title.trim() || '数据图表',
+      title: title.trim() || t('数据图表'),
       r1: value.r1,
       r2: value.r2,
       c1: value.c1,
@@ -90,7 +92,7 @@ export function ChartDialog({ open, tab, value, onClose, onSubmit }: ChartDialog
       headerRow,
       headerCol,
     }
-  }, [headerCol, headerRow, kind, title, value])
+  }, [headerCol, headerRow, kind, t, title, value])
 
   const data = useMemo(() => (draft ? buildChartData(tab, draft) : null), [draft, tab])
   if (!value || !draft || !data) return null
@@ -102,7 +104,7 @@ export function ChartDialog({ open, tab, value, onClose, onSubmit }: ChartDialog
     onSubmit({
       ...value,
       kind,
-      title: title.trim() || '数据图表',
+      title: title.trim() || t('数据图表'),
       headerRow,
       headerCol,
     })
@@ -112,18 +114,18 @@ export function ChartDialog({ open, tab, value, onClose, onSubmit }: ChartDialog
     <Modal
       open={open}
       onClose={onClose}
-      title={value.id ? '编辑图表' : '插入图表'}
-      description={`数据范围 ${address} · ${cellCount} 格。图表保存在本机，会随单元格数值实时刷新。`}
+      title={value.id ? t('编辑图表') : t('插入图表')}
+      description={t('数据范围 {address} · {n} 格。图表保存在本机，会随单元格数值实时刷新。', { address, n: cellCount })}
       width={880}
       className="chart-dialog"
       footer={
         <>
-          <span className="chart-dialog-foot-hint">还可以在看板中调整分组与汇总口径。</span>
+          <span className="chart-dialog-foot-hint">{t('还可以在看板中调整分组与汇总口径。')}</span>
           <button type="button" className="btn btn-ghost" onClick={onClose}>
-            取消
+            {t('取消')}
           </button>
           <button type="button" className="btn btn-primary" onClick={submit}>
-            {value.id ? '保存图表' : '添加到看板'}
+            {value.id ? t('保存图表') : t('添加到看板')}
           </button>
         </>
       }
@@ -131,11 +133,11 @@ export function ChartDialog({ open, tab, value, onClose, onSubmit }: ChartDialog
       <div className="chart-dialog-body">
         <div className="chart-dialog-config">
           <div className="chart-field">
-            <span className="chart-field-label">图表类型</span>
+            <span className="chart-field-label">{t('图表类型')}</span>
             {KIND_GROUPS.map((group) => (
               <div className="chart-kind-group" key={group.label}>
-                <span className="chart-kind-group-label">{group.label}</span>
-                <div className="chart-kind-grid" role="radiogroup" aria-label={`${group.label}图表`}>
+                <span className="chart-kind-group-label">{t(group.label)}</span>
+                <div className="chart-kind-grid" role="radiogroup" aria-label={t('{group}图表', { group: t(group.label) })}>
                   {group.items.map((item) => {
                     const Icon = item.icon
                     return (
@@ -148,7 +150,7 @@ export function ChartDialog({ open, tab, value, onClose, onSubmit }: ChartDialog
                         onClick={() => setKind(item.kind)}
                       >
                         <Icon size={16} />
-                        <span>{CHART_KIND_LABELS[item.kind]}</span>
+                        <span>{t(CHART_KIND_LABELS[item.kind])}</span>
                       </button>
                     )
                   })}
@@ -158,17 +160,17 @@ export function ChartDialog({ open, tab, value, onClose, onSubmit }: ChartDialog
           </div>
 
           <label className="chart-field">
-            <span className="chart-field-label">图表标题</span>
+            <span className="chart-field-label">{t('图表标题')}</span>
             <input
               className="input chart-title-input"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              placeholder="例如：季度成本趋势"
+              placeholder={t('例如：季度成本趋势')}
             />
           </label>
 
           <div className="chart-field">
-            <span className="chart-field-label">数据识别</span>
+            <span className="chart-field-label">{t('数据识别')}</span>
             <label className={cn('chart-option', value.r2 === value.r1 && 'disabled')}>
               <input
                 type="checkbox"
@@ -177,8 +179,8 @@ export function ChartDialog({ open, tab, value, onClose, onSubmit }: ChartDialog
                 onChange={(event) => setHeaderRow(event.target.checked)}
               />
               <span>
-                首行是列标题
-                <em>作为系列名称，不参与绘图</em>
+                {t('首行是列标题')}
+                <em>{t('作为系列名称，不参与绘图')}</em>
               </span>
             </label>
             <label className={cn('chart-option', value.c2 === value.c1 && 'disabled')}>
@@ -189,31 +191,31 @@ export function ChartDialog({ open, tab, value, onClose, onSubmit }: ChartDialog
                 onChange={(event) => setHeaderCol(event.target.checked)}
               />
               <span>
-                首列是分类标签
-                <em>用于横轴或扇区名称</em>
+                {t('首列是分类标签')}
+                <em>{t('用于横轴或扇区名称')}</em>
               </span>
             </label>
           </div>
 
           <div className="chart-dialog-tip">
-            <span className="chart-dialog-tip-mark">选中</span>
+            <span className="chart-dialog-tip-mark">{t('选中')}</span>
             <p>
-              {data.categories.length} 个分类 · {data.series.length} 个系列。想换数据范围，关闭后重新框选单元格再插入。
+              {t('{cats} 个分类 · {series} 个系列。想换数据范围，关闭后重新框选单元格再插入。', { cats: data.categories.length, series: data.series.length })}
             </p>
           </div>
         </div>
 
         <div className="chart-dialog-preview">
           <div className="chart-preview-head">
-            <h3>{title.trim() || '数据图表'}</h3>
-            <span>{CHART_KIND_LABELS[kind]}</span>
+            <h3>{title.trim() || t('数据图表')}</h3>
+            <span>{t(CHART_KIND_LABELS[kind])}</span>
           </div>
           <div className="chart-preview-canvas">
             <SheetChartView data={data} kind={kind} />
           </div>
           <div className="chart-preview-foot">
             <span>{address}</span>
-            <span>本机渲染 · SVG</span>
+            <span>{t('本机渲染 · SVG')}</span>
           </div>
         </div>
       </div>

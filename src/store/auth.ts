@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { t } from '../i18n'
 import {
   clearRuodaoSession,
   fetchRuodaoModels,
@@ -79,14 +80,19 @@ export const useAuth = create<AuthState>((set, get) => ({
             session: saved,
             baseUrl: saved.baseUrl,
             error: isNetworkError(error)
-              ? '暂时无法连接若道服务，已保留登录状态，恢复网络后自动重试'
-              : '暂时无法续期登录，正在自动重试',
+              ? t('暂时无法连接若道服务，已保留登录状态，恢复网络后自动重试')
+              : t('暂时无法续期登录，正在自动重试'),
           })
           scheduleRefresh(saved)
           return
         }
         await clearRuodaoSession()
-        set({ status: 'ready', session: null, baseUrl: saved.baseUrl, error: '若道登录已过期，请重新登录' })
+        set({
+          status: 'ready',
+          session: null,
+          baseUrl: saved.baseUrl,
+          error: t('若道登录已过期，请重新登录'),
+        })
         return
       }
     }
@@ -111,7 +117,7 @@ export const useAuth = create<AuthState>((set, get) => ({
       scheduleRefresh(session)
       void get().loadModels().catch(() => undefined)
     } catch (error) {
-      set({ status: 'ready', error: (error as Error).message || '登录失败' })
+      set({ status: 'ready', error: (error as Error).message || t('登录失败') })
       throw error
     }
   },
@@ -142,13 +148,13 @@ export const useAuth = create<AuthState>((set, get) => ({
         if (!stillCurrent()) return false
         if (isAuthExpiredError(error)) {
           await clearRuodaoSession()
-          set({ session: null, models: [], error: '登录已过期，请重新登录' })
+          set({ session: null, models: [], error: t('登录已过期，请重新登录') })
           return false
         }
         set({
           error: isNetworkError(error)
-            ? '暂时无法连接若道服务，恢复后会自动重试'
-            : (error as Error).message || '续期失败，正在自动重试',
+            ? t('暂时无法连接若道服务，恢复后会自动重试')
+            : (error as Error).message || t('续期失败，正在自动重试'),
         })
         scheduleRefresh(session)
         return false
@@ -174,13 +180,13 @@ export const useAuth = create<AuthState>((set, get) => ({
         if (!isAuthExpiredError(error)) throw error
         const refreshed = await get().refresh()
         const next = get().session
-        if (!refreshed || !next) throw new Error(get().error || '若道登录已过期，请重新登录')
+        if (!refreshed || !next) throw new Error(get().error || t('若道登录已过期，请重新登录'))
         models = await fetchRuodaoModels(next)
       }
       set({ models, modelsLoading: false })
       return models
     } catch (error) {
-      set({ modelsLoading: false, modelsError: (error as Error).message || '读取云端模型失败' })
+      set({ modelsLoading: false, modelsError: (error as Error).message || t('读取云端模型失败') })
       throw error
     }
   },
@@ -192,12 +198,12 @@ export const useAuth = create<AuthState>((set, get) => ({
       return fetch(`${session.baseUrl}${path}`, { ...init, headers })
     }
     const session = get().session
-    if (!session) throw new Error('请先登录若道账户')
+    if (!session) throw new Error(t('请先登录若道账户'))
     let response = await build(session)
     if (response.status === 401) {
       const refreshed = await get().refresh()
       const next = get().session
-      if (!refreshed || !next) throw new Error(get().error || '若道登录已过期，请重新登录')
+      if (!refreshed || !next) throw new Error(get().error || t('若道登录已过期，请重新登录'))
       response = await build(next)
     }
     return response
@@ -206,10 +212,10 @@ export const useAuth = create<AuthState>((set, get) => ({
 
 export function displayNameOf(user: RuodaoUser | null | undefined): string {
   if (!user) return ''
-  return user.displayName?.trim() || user.email?.split('@')[0] || '若道用户'
+  return user.displayName?.trim() || user.email?.split('@')[0] || t('若道用户')
 }
 
 export function initialsOf(user: RuodaoUser | null | undefined): string {
   const name = displayNameOf(user)
-  return name.trim().charAt(0).toUpperCase() || '若'
+  return name.trim().charAt(0).toUpperCase() || t('若')
 }

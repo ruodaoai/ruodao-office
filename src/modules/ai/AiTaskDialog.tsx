@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import type { AiContext, ModuleId } from '../../types'
 import { Modal } from '../../components/ui'
+import { useT } from '../../i18n'
 import {
   contextBlock,
   localAnalyze,
@@ -249,6 +250,7 @@ export function AiTaskDialog() {
   const resultRef = useRef<HTMLDivElement>(null)
   const lastSeedRef = useRef<string | null>(null)
   const tasks = TASKS[module]
+  const t = useT()
 
   useEffect(() => {
     if (!open) return
@@ -287,7 +289,7 @@ export function AiTaskDialog() {
   const refreshContext = () => {
     const next = getAiContext(module)
     setContext(next)
-    if (!next) toast('当前模块没有可读取的内容，可以直接描述任务', 'info')
+    if (!next) toast(t('当前模块没有可读取的内容，可以直接描述任务'), 'info')
   }
 
   const stop = useCallback(() => {
@@ -296,14 +298,14 @@ export function AiTaskDialog() {
 
   const runLocal = () => {
     if (!context?.text.trim()) {
-      setError('当前没有可读取的内容。先打开一份文档、表格或笔记，再运行离线分析。')
+      setError(t('当前没有可读取的内容。先打开一份文档、表格或笔记，再运行离线分析。'))
       setStatus('error')
       return
     }
     setError('')
     const markdown = localSummaryMarkdown(localAnalyze(context.text))
     setResult(
-      `${markdown}\n\n> 离线模式只在设备上做词频与摘要计算，不会生成公式或图表建议。配置模型后可执行完整任务。`,
+      `${markdown}\n\n> ${t('离线模式只在设备上做词频与摘要计算，不会生成公式或图表建议。配置模型后可执行完整任务。')}`,
     )
     setLocalResult(true)
     setStatus('done')
@@ -316,7 +318,7 @@ export function AiTaskDialog() {
     }
     const text = prompt.trim()
     if (!text) {
-      toast('先写下要完成的任务', 'info')
+      toast(t('先写下要完成的任务'), 'info')
       return
     }
     const task = tasks.find((item) => item.id === taskId)
@@ -331,7 +333,9 @@ export function AiTaskDialog() {
         runLocal()
         return
       }
-      setError('这个任务需要接入模型。请先配置 AI 服务，或点下方的「离线分析」处理当前内容。')
+      setError(
+        t('这个任务需要接入模型。请先配置 AI 服务，或点下方的「离线分析」处理当前内容。'),
+      )
       setStatus('error')
       return
     }
@@ -358,9 +362,9 @@ export function AiTaskDialog() {
       if ((runError as Error).name === 'AbortError') {
         if (!full) setStatus('idle')
         else setStatus('done')
-        toast('已停止生成')
+        toast(t('已停止生成'))
       } else {
-        setError((runError as Error).message || '生成失败，请稍后重试')
+        setError((runError as Error).message || t('生成失败，请稍后重试'))
         setStatus('error')
       }
     } finally {
@@ -372,53 +376,63 @@ export function AiTaskDialog() {
     if (!result.trim()) return
     try {
       await navigator.clipboard.writeText(result)
-      toast('结果已复制', 'success')
+      toast(t('结果已复制'), 'success')
     } catch {
-      toast('复制失败，请手动选择文本', 'error')
+      toast(t('复制失败，请手动选择文本'), 'error')
     }
   }
 
   const insertResult = () => {
     if (!result.trim()) return
     const ok = insertAiText(module, result)
-    if (ok) toast(module === 'sheets' ? '已填入当前单元格区域' : '已插入到当前内容', 'success')
+    if (ok) toast(module === 'sheets' ? t('已填入当前单元格区域') : t('已插入到当前内容'), 'success')
     else {
       void copyResult()
-      toast('当前没有可插入的位置，结果已尝试复制', 'info')
+      toast(t('当前没有可插入的位置，结果已尝试复制'), 'info')
     }
   }
 
   const canInsert = module === 'docs' || module === 'notes' || module === 'sheets'
-  const contextLabel = context ? `${KIND_LABEL[context.kind]}《${context.title}》` : '未读取到当前内容'
+  const contextLabel = context
+    ? t('{kind}《{title}》', { kind: t(KIND_LABEL[context.kind]), title: context.title })
+    : t('未读取到当前内容')
   const busy = status === 'running'
 
   return (
     <Modal
       open={open}
       onClose={close}
-      title="AI 任务窗口"
-      description="AI 会读取当前打开的内容，完成一件完整的办公工作；结果可以一键写回。"
+      title={t('AI 任务窗口')}
+      description={t('AI 会读取当前打开的内容，完成一件完整的办公工作；结果可以一键写回。')}
       width={880}
       className="ai-task-dialog"
       footer={
         <>
           <span className="ai-task-foot-hint">
-            {configured ? `${provider?.name ?? '自定义'} · ${settings.model}` : '未接入模型 · 离线分析可用'}
+            {configured
+              ? `${t(provider?.name ?? '自定义')} · ${settings.model}`
+              : t('未接入模型 · 离线分析可用')}
           </span>
           {!configured && (
             <>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={runLocal} disabled={busy} title="在本机做词频摘要，不上传任何内容">
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={runLocal}
+                disabled={busy}
+                title={t('在本机做词频摘要，不上传任何内容')}
+              >
                 <Lock size={12} />
-                离线分析
+                {t('离线分析')}
               </button>
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => openSettings('ai')}>
                 <Settings2 size={13} />
-                配置模型
+                {t('配置模型')}
               </button>
             </>
           )}
           <button type="button" className="btn btn-ghost" onClick={close}>
-            关闭
+            {t('关闭')}
           </button>
           <button
             type="button"
@@ -428,12 +442,12 @@ export function AiTaskDialog() {
             {busy ? (
               <>
                 <Square size={12} fill="currentColor" />
-                停止
+                {t('停止')}
               </>
             ) : (
               <>
                 <Play size={13} />
-                运行任务
+                {t('运行任务')}
               </>
             )}
           </button>
@@ -449,17 +463,19 @@ export function AiTaskDialog() {
             <strong>{contextLabel}</strong>
             <span>
               {context
-                ? `${context.text.length.toLocaleString('zh-CN')} 字符已就绪 · 只会发送到你选择的模型服务`
-                : '可以直接描述任务；打开文档、表格或笔记后，AI 能读取其中的内容'}
+                ? t('{count} 字符已就绪 · 只会发送到你选择的模型服务', {
+                    count: context.text.length.toLocaleString('zh-CN'),
+                  })
+                : t('可以直接描述任务；打开文档、表格或笔记后，AI 能读取其中的内容')}
             </span>
           </div>
           <button type="button" className="ai-task-refresh" onClick={refreshContext}>
             <RefreshCw size={12} />
-            刷新
+            {t('刷新')}
           </button>
         </div>
 
-        <div className="ai-task-tasks" role="list" aria-label="任务模板">
+        <div className="ai-task-tasks" role="list" aria-label={t('任务模板')}>
           {tasks.map((item) => {
             const Icon = item.icon
             return (
@@ -481,10 +497,10 @@ export function AiTaskDialog() {
                   <Icon size={15} />
                 </span>
                 <span className="ai-task-card-copy">
-                  <strong>{item.title}</strong>
-                  <em>{item.hint}</em>
+                  <strong>{t(item.title)}</strong>
+                  <em>{t(item.hint)}</em>
                 </span>
-                {item.local && <span className="ai-task-card-local">离线</span>}
+                {item.local && <span className="ai-task-card-local">{t('离线')}</span>}
               </button>
             )
           })}
@@ -492,13 +508,13 @@ export function AiTaskDialog() {
 
         <label className="ai-task-prompt">
           <span className="ai-task-prompt-label">
-            任务描述
-            <em>Ctrl + Enter 运行</em>
+            {t('任务描述')}
+            <em>{t('Ctrl + Enter 运行')}</em>
           </span>
           <textarea
             rows={3}
             value={prompt}
-            placeholder="例如：按月份汇总收入，指出增长最快的两个月，并生成一段汇报文字。"
+            placeholder={t('例如：按月份汇总收入，指出增长最快的两个月，并生成一段汇报文字。')}
             onChange={(event) => {
               setPrompt(event.target.value)
               setTaskId('custom')
@@ -515,19 +531,19 @@ export function AiTaskDialog() {
         <div className="ai-task-result">
           <div className="ai-task-result-head">
             <span className="ai-task-result-title">
-              执行结果
-              {localResult && <em className="ai-task-result-badge">本机计算</em>}
+              {t('执行结果')}
+              {localResult && <em className="ai-task-result-badge">{t('本机计算')}</em>}
               {busy && <Loader2 size={12} className="spin" />}
             </span>
             <div className="ai-task-result-actions">
               <button type="button" disabled={!result} onClick={() => void copyResult()}>
                 <Copy size={11} />
-                复制
+                {t('复制')}
               </button>
               {canInsert && (
                 <button type="button" disabled={!result} onClick={insertResult}>
                   <CornerDownLeft size={11} />
-                  {module === 'sheets' ? '填入表格' : '插入内容'}
+                  {module === 'sheets' ? t('填入表格') : t('插入内容')}
                 </button>
               )}
               <button
@@ -538,7 +554,7 @@ export function AiTaskDialog() {
                 }}
               >
                 <Sparkles size={11} />
-                继续对话
+                {t('继续对话')}
               </button>
             </div>
           </div>
@@ -559,8 +575,8 @@ export function AiTaskDialog() {
             ) : (
               <div className="ai-task-empty">
                 <Sparkles size={18} />
-                <strong>选一个任务，或直接写下你的要求。</strong>
-                <span>AI 会基于当前内容给出可用的成品，并支持一键写回。</span>
+                <strong>{t('选一个任务，或直接写下你的要求。')}</strong>
+                <span>{t('AI 会基于当前内容给出可用的成品，并支持一键写回。')}</span>
               </div>
             )}
           </div>

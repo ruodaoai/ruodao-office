@@ -1,3 +1,5 @@
+import { t } from '../../i18n'
+
 export type ImageFormat = 'png' | 'jpeg' | 'webp' | 'bmp' | 'ico'
 export type CropRatio = 'none' | '1:1' | '4:3' | '16:9' | '3:4'
 
@@ -29,18 +31,18 @@ function readSource(file: Blob): Promise<LoadedSource> {
         canvas.width = width
         canvas.height = height
         const ctx = canvas.getContext('2d')
-        if (!ctx) throw new Error('无法创建画布')
+        if (!ctx) throw new Error(t('无法创建画布'))
         ctx.drawImage(image, 0, 0, width, height)
         resolve({ canvas, width, height })
       } catch (error) {
-        reject(error instanceof Error ? error : new Error('图片读取失败'))
+        reject(error instanceof Error ? error : new Error(t('图片读取失败')))
       } finally {
         URL.revokeObjectURL(url)
       }
     }
     image.onerror = () => {
       URL.revokeObjectURL(url)
-      reject(new Error('浏览器无法读取这种图片，请先转成 PNG、JPEG 或 WebP'))
+      reject(new Error(t('浏览器无法读取这种图片，请先转成 PNG、JPEG 或 WebP')))
     }
     image.src = url
   })
@@ -69,7 +71,7 @@ function drawProcessed(source: LoadedSource, options: ImageOptions, background?:
   canvas.width = width
   canvas.height = height
   const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('无法创建画布')
+  if (!ctx) throw new Error(t('无法创建画布'))
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = 'high'
   if (background) {
@@ -84,7 +86,7 @@ function drawProcessed(source: LoadedSource, options: ImageOptions, background?:
 function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error('图片编码失败'))),
+      (blob) => (blob ? resolve(blob) : reject(new Error(t('图片编码失败')))),
       type,
       quality,
     )
@@ -93,7 +95,7 @@ function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality?: number)
 
 function encodeBmp(canvas: HTMLCanvasElement): Blob {
   const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('无法读取画布')
+  if (!ctx) throw new Error(t('无法读取画布'))
   const { width, height } = canvas
   const image = ctx.getImageData(0, 0, width, height)
   const rowSize = Math.ceil((width * 3) / 4) * 4
@@ -132,7 +134,7 @@ function squareCanvas(source: HTMLCanvasElement, size: number): HTMLCanvasElemen
   canvas.width = size
   canvas.height = size
   const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('无法创建图标画布')
+  if (!ctx) throw new Error(t('无法创建图标画布'))
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = 'high'
   const scale = Math.min(size / source.width, size / source.height)
@@ -225,7 +227,7 @@ export async function imagesToPdfBlob(
   images: PdfImageItem[],
   onProgress?: (ratio: number) => void,
 ): Promise<Uint8Array> {
-  if (!images.length) throw new Error('没有可合成的图片')
+  if (!images.length) throw new Error(t('没有可合成的图片'))
   const { PDFDocument } = await import('pdf-lib')
   const doc = await PDFDocument.create()
   const a4: [number, number] = [595.28, 841.89]

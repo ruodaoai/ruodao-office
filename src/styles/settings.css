@@ -292,3 +292,71 @@
 .spin {
   animation: spin 0.9s linear infinite;
 }
+
+/* ---------- settings · general / interface language ---------- */
+
+.lang-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.lang-option {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: 10px;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  text-align: left;
+  transition: border-color 0.14s var(--ease), background 0.14s var(--ease);
+}
+
+.lang-option:hover {
+  border-color: var(--line-strong);
+}
+
+.lang-option.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.lang-option.active svg {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  color: var(--accent-ink);
+}
+
+.lang-name {
+  grid-column: 1;
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--ink);
+  line-height: 1.4;
+}
+
+.lang-native {
+  grid-column: 1;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.settings-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  align-self: flex-start;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.settings-check input {
+  accent-color: var(--accent);
+  width: 13px;
+  height: 13px;
+  margin: 0;
+}

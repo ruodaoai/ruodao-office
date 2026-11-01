@@ -1,3 +1,5 @@
+import { t } from '../i18n'
+
 export type SignatureInk = 'ink' | 'blue' | 'vermilion'
 
 export type SignatureStyle = 'kai' | 'song' | 'script'
@@ -36,18 +38,25 @@ function createCanvas(width: number, height: number): HTMLCanvasElement {
 
 function context2d(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
   const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('无法创建绘图画布')
+  if (!ctx) throw new Error(t('无法创建绘图画布'))
   return ctx
 }
 
 function todayLabel(): string {
   const now = new Date()
-  return `${now.getFullYear()} 年 ${now.getMonth() + 1} 月 ${now.getDate()} 日`
+  return t('{year} 年 {month} 月 {day} 日', {
+    year: now.getFullYear(),
+    month: now.getMonth() + 1,
+    day: now.getDate(),
+  })
 }
 
 export function signatureCaption(signer: string): string {
   const name = signer.trim()
-  return name ? `签署人：${name}   ·   ${todayLabel()}` : `本地签署   ·   ${todayLabel()}`
+  const date = todayLabel()
+  return name
+    ? t('签署人：{name}   ·   {date}', { name, date })
+    : t('本地签署   ·   {date}', { date })
 }
 
 function composeSignature(source: CanvasImageSource, sourceWidth: number, sourceHeight: number, caption: string): string {
@@ -82,7 +91,7 @@ export function typedSignatureDataUrl(options: {
   const canvas = createCanvas(SIGNATURE_WIDTH, SIGNATURE_HEIGHT)
   const ctx = context2d(canvas)
   const color = SIGNATURE_INK_COLORS[options.ink]
-  const name = options.name.trim() || '签名'
+  const name = options.name.trim() || t('签名')
   ctx.fillStyle = color
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
@@ -149,7 +158,7 @@ export function uploadedSignatureDataUrl(dataUrl: string, caption?: string): Pro
         reject(error)
       }
     }
-    image.onerror = () => reject(new Error('无法读取签名图片'))
+    image.onerror = () => reject(new Error(t('无法读取签名图片')))
     image.src = dataUrl
   })
 }
@@ -200,8 +209,8 @@ export function sealDataUrl(options: { company: string; sealText: string; color:
   const ctx = context2d(canvas)
   const cx = 280
   const cy = 280
-  const company = options.company.trim() || '若道科技有限公司'
-  const sealText = options.sealText.trim() || '合同专用章'
+  const company = options.company.trim() || t('若道科技有限公司')
+  const sealText = options.sealText.trim() || t('合同专用章')
   ctx.save()
   ctx.translate(cx, cy)
   ctx.rotate(-0.07)
@@ -253,7 +262,7 @@ export function noteDataUrl(options: {
   const measure = createCanvas(10, 10)
   const measureCtx = context2d(measure)
   measureCtx.font = '28px "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif'
-  const lines = wrapText(measureCtx, options.text.trim() || '（空白批注）', width - padding * 2 - 26).slice(0, 14)
+  const lines = wrapText(measureCtx, options.text.trim() || t('（空白批注）'), width - padding * 2 - 26).slice(0, 14)
   const bodyHeight = lines.length * 42
   const height = 116 + bodyHeight + 64
   const canvas = createCanvas(width, height)
@@ -269,7 +278,7 @@ export function noteDataUrl(options: {
   ctx.font = '700 20px "Microsoft YaHei", "PingFang SC", sans-serif'
   ctx.textBaseline = 'middle'
   ctx.fillStyle = color
-  ctx.fillText('批注', padding + 12, 46)
+  ctx.fillText(t('批注'), padding + 12, 46)
   ctx.fillStyle = '#8d8275'
   ctx.font = '16px "Segoe UI", "Microsoft YaHei", sans-serif'
   ctx.fillText('NOTE', padding + 66, 47)
@@ -287,6 +296,10 @@ export function noteDataUrl(options: {
   ctx.fillStyle = '#8d8275'
   ctx.font = '18px "Microsoft YaHei", sans-serif'
   const stamp = options.date || todayLabel()
-  ctx.fillText(`${options.author.trim() || '本地批注'}  ·  ${stamp}`, padding + 12, height - 32)
+  ctx.fillText(
+    t('{author}  ·  {date}', { author: options.author.trim() || t('本地批注'), date: stamp }),
+    padding + 12,
+    height - 32,
+  )
   return { dataUrl: canvas.toDataURL('image/png'), width, height }
 }

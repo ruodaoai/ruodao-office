@@ -4,9 +4,11 @@ import { importDocFile } from '../../lib/openFiles'
 import { cn, htmlToText, timeAgo } from '../../lib/utils'
 import { useLibrary } from '../../store/library'
 import { useUI } from '../../store/ui'
+import { useT } from '../../i18n'
 import { DocEditor } from './DocEditor'
 
 export function DocsModule() {
+  const t = useT()
   const docs = useLibrary((s) => s.docs)
   const activeDocId = useLibrary((s) => s.activeDocId)
   const setActive = useLibrary((s) => s.setActive)
@@ -36,7 +38,7 @@ export function DocsModule() {
   const handleNew = () => {
     createDoc()
     setQuery('')
-    toast('已新建空白文档', 'success')
+    toast(t('已新建空白文档'), 'success')
   }
 
   const importFile = async (file: File) => {
@@ -44,20 +46,23 @@ export function DocsModule() {
     try {
       const info = await importDocFile(file)
       if (info.reused) {
-        toast(`《${info.title}》已有编辑版本，已为你打开`, 'info')
+        toast(t('《{title}》已有编辑版本，已为你打开', { title: info.title }), 'info')
       } else if (info.hasSource) {
         toast(
           info.warnings
-            ? `已打开原稿，${info.warnings} 处格式在编辑视图中会近似还原`
-            : '已打开原稿，可切换编辑视图继续修改',
+            ? t('已打开原稿，{n} 处格式在编辑视图中会近似还原', { n: info.warnings })
+            : t('已打开原稿，可切换编辑视图继续修改'),
           'success',
         )
       } else {
-        toast(file.name.toLowerCase().endsWith('.html') ? 'HTML 文档已导入' : '文本已导入', 'success')
+        toast(
+          file.name.toLowerCase().endsWith('.html') ? t('HTML 文档已导入') : t('文本已导入'),
+          'success',
+        )
       }
       setQuery('')
     } catch (error) {
-      toast((error as Error).message || '导入失败，请检查文件', 'error')
+      toast((error as Error).message || t('导入失败，请检查文件'), 'error')
     } finally {
       setImporting(false)
       if (fileRef.current) fileRef.current.value = ''
@@ -69,10 +74,16 @@ export function DocsModule() {
       <aside className="docs-sidebar">
         <div className="docs-side-head">
           <div className="docs-side-title-wrap">
-            <h1 className="docs-side-title">文档</h1>
+            <h1 className="docs-side-title">{t('文档')}</h1>
             <span className="docs-side-count">{docs.length}</span>
           </div>
-          <button type="button" className="icon-btn" onClick={handleNew} title="新建文档" aria-label="新建文档">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={handleNew}
+            title={t('新建文档')}
+            aria-label={t('新建文档')}
+          >
             <Plus size={16} />
           </button>
         </div>
@@ -82,11 +93,16 @@ export function DocsModule() {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="搜索标题或正文"
-            aria-label="搜索文档"
+            placeholder={t('搜索标题或正文')}
+            aria-label={t('搜索文档')}
           />
           {query && (
-            <button type="button" className="docs-search-clear" onClick={() => setQuery('')} aria-label="清除搜索">
+            <button
+              type="button"
+              className="docs-search-clear"
+              onClick={() => setQuery('')}
+              aria-label={t('清除搜索')}
+            >
               <X size={12} />
             </button>
           )}
@@ -105,17 +121,21 @@ export function DocsModule() {
               >
                 <span className="doc-item-title">{doc.title}</span>
                 <span className="doc-item-time tabular">{timeAgo(doc.updatedAt)}</span>
-                <span className="doc-item-sub">{excerpt || '空白文档，等待落笔。'}</span>
+                <span className="doc-item-sub">{excerpt || t('空白文档，等待落笔。')}</span>
               </button>
             )
           })}
           {filtered.length === 0 && (
             <div className="docs-list-empty">
               <FileText size={18} />
-              <p>{docs.length === 0 ? '还没有文档。' : `没有匹配「${query.trim()}」的文档。`}</p>
+              <p>
+                {docs.length === 0
+                  ? t('还没有文档。')
+                  : t('没有匹配「{query}」的文档。', { query: query.trim() })}
+              </p>
               <button type="button" className="btn btn-secondary btn-sm" onClick={handleNew}>
                 <FilePlus2 size={13} />
-                新建文档
+                {t('新建文档')}
               </button>
             </div>
           )}
@@ -129,9 +149,9 @@ export function DocsModule() {
             disabled={importing}
           >
             {importing ? <span className="spinner" style={{ width: 13, height: 13 }} /> : <FileUp size={14} />}
-            {importing ? '正在解析…' : '导入 Word / HTML'}
+            {importing ? t('正在解析…') : t('导入 Word / HTML')}
           </button>
-          <p>文件只解析并保存在本机。</p>
+          <p>{t('文件只解析并保存在本机。')}</p>
         </div>
       </aside>
 
@@ -141,17 +161,17 @@ export function DocsModule() {
         ) : (
           <div className="docs-blank">
             <div className="docs-blank-paper">
-              <span className="docs-blank-mark">文</span>
-              <h2>从一页空白开始。</h2>
-              <p>写作、排版、导出，都在本机完成。也可以直接导入已有的 Word 文档继续编辑。</p>
+              <span className="docs-blank-mark">{t('文')}</span>
+              <h2>{t('从一页空白开始。')}</h2>
+              <p>{t('写作、排版、导出，都在本机完成。也可以直接导入已有的 Word 文档继续编辑。')}</p>
               <div className="docs-blank-actions">
                 <button type="button" className="btn btn-primary" onClick={handleNew}>
                   <Plus size={14} />
-                  新建文档
+                  {t('新建文档')}
                 </button>
                 <button type="button" className="btn btn-secondary" onClick={() => fileRef.current?.click()}>
                   <FileUp size={14} />
-                  导入 Word
+                  {t('导入 Word')}
                 </button>
               </div>
             </div>

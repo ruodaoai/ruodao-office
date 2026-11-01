@@ -14,6 +14,7 @@ import {
   type SignatureStyle,
 } from '../../lib/pdfArt'
 import { cn } from '../../lib/utils'
+import { useT } from '../../i18n'
 
 export type SignatureScope = 'selection' | 'all' | 'last' | 'first'
 
@@ -51,6 +52,7 @@ const PLACES: Array<{ id: PdfImagePlacement; label: string }> = [
 ]
 
 export function SignatureStudio({ open, busy, pageCount, selectedCount, onClose, onApply }: SignatureStudioProps) {
+  const t = useT()
   const [mode, setMode] = useState<SourceMode>('draw')
   const [ink, setInk] = useState<SignatureInk>('ink')
   const [hasInk, setHasInk] = useState(false)
@@ -59,8 +61,8 @@ export function SignatureStudio({ open, busy, pageCount, selectedCount, onClose,
   const [uploaded, setUploaded] = useState<{ name: string; dataUrl: string } | null>(null)
   const [uploadedPng, setUploadedPng] = useState<string | null>(null)
   const [stripWhite, setStripWhite] = useState(true)
-  const [sealCompany, setSealCompany] = useState('若道科技有限公司')
-  const [sealText, setSealText] = useState('合同专用章')
+  const [sealCompany, setSealCompany] = useState(t('若道科技有限公司'))
+  const [sealText, setSealText] = useState(t('合同专用章'))
   const [sealColor, setSealColor] = useState('#c0392b')
   const [showCaption, setShowCaption] = useState(true)
   const [signer, setSigner] = useState('')
@@ -77,8 +79,8 @@ export function SignatureStudio({ open, busy, pageCount, selectedCount, onClose,
   const caption = showCaption && mode !== 'seal' ? signatureCaption(signer) : ''
 
   const typedPreview = useMemo(
-    () => typedSignatureDataUrl({ name: typedName || '签名', style: typedStyle, ink, caption }),
-    [typedName, typedStyle, ink, caption],
+    () => typedSignatureDataUrl({ name: typedName || t('签名'), style: typedStyle, ink, caption }),
+    [typedName, typedStyle, ink, caption, t],
   )
   const sealPreview = useMemo(
     () => sealDataUrl({ company: sealCompany, sealText, color: sealColor }),
@@ -209,12 +211,12 @@ export function SignatureStudio({ open, busy, pageCount, selectedCount, onClose,
   const canApply = !busy && (mode !== 'draw' || hasInk) && (mode !== 'upload' || Boolean(uploadPreview))
   const scopeLabel =
     scope === 'all'
-      ? `全部 ${pageCount} 页`
+      ? t('全部 {count} 页', { count: pageCount })
       : scope === 'last'
-        ? '仅最后一页'
+        ? t('仅最后一页')
         : scope === 'first'
-          ? '仅第一页'
-          : `所选 ${selectedCount} 页`
+          ? t('仅第一页')
+          : t('所选 {count} 页', { count: selectedCount })
 
   return (
     <Modal
@@ -222,21 +224,21 @@ export function SignatureStudio({ open, busy, pageCount, selectedCount, onClose,
       onClose={onClose}
       width={920}
       className="signature-studio-modal"
-      title="电子签名台"
-      description={`签名会作为矢量页面的图片图层写入本地 PDF · 当前文件 ${pageCount} 页`}
+      title={t('电子签名台')}
+      description={t('签名会作为矢量页面的图片图层写入本地 PDF · 当前文件 {count} 页', { count: pageCount })}
       footer={
         <div className="signature-foot">
           <span className="signature-foot-note">
             <ShieldCheck size={13} />
-            不上传、不留存，关闭后即从内存清除
+            {t('不上传、不留存，关闭后即从内存清除')}
           </span>
           <div className="signature-foot-actions">
             <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
-              取消
+              {t('取消')}
             </button>
             <button type="button" className="btn btn-primary btn-sm" onClick={() => void apply()} disabled={!canApply}>
               <PenLine size={13} />
-              写入 PDF
+              {t('写入 PDF')}
             </button>
           </div>
         </div>
@@ -244,7 +246,7 @@ export function SignatureStudio({ open, busy, pageCount, selectedCount, onClose,
     >
       <div className="signature-studio">
         <section className="signature-stage">
-          <div className="signature-modes" role="tablist" aria-label="签名来源">
+          <div className="signature-modes" role="tablist" aria-label={t('签名来源')}>
             {MODES.map((item) => {
               const Icon = item.icon
               return (
@@ -257,7 +259,7 @@ export function SignatureStudio({ open, busy, pageCount, selectedCount, onClose,
                   onClick={() => setMode(item.id)}
                 >
                   <Icon size={14} />
-                  {item.label}
+                  {t(item.label)}
                 </button>
               )
             })}
@@ -271,7 +273,7 @@ export function SignatureStudio({ open, busy, pageCount, selectedCount, onClose,
                   width={900}
                   height={300}
                   className="signature-pad"
-                  aria-label="手写签名画板"
+                  aria-label={t('手写签名画板')}
                   onPointerDown={(event) => {
                     event.currentTarget.setPointerCapture(event.pointerId)
                     drawingRef.current = true
@@ -299,14 +301,14 @@ export function SignatureStudio({ open, busy, pageCount, selectedCount, onClose,
                     lastPointRef.current = null
                   }}
                 />
-                {!hasInk ? <span className="signature-pad-hint">用鼠标或触控笔在此签名</span> : null}
+                {!hasInk ? <span className="signature-pad-hint">{t('用鼠标或触控笔在此签名')}</span> : null}
                 <span className="signature-pad-line" aria-hidden />
               </div>
             ) : null}
 
             {mode === 'type' ? (
               <div className="signature-preview signature-preview-type">
-                <img src={typedPreview} alt="键入签名预览" />
+                <img src={typedPreview} alt={t('键入签名预览')} />
               </div>
             ) : null}
 
@@ -314,13 +316,13 @@ export function SignatureStudio({ open, busy, pageCount, selectedCount, onClose,
               <div className="signature-upload-area">
                 {uploadPreview ? (
                   <div className="signature-preview">
-                    <img src={uploadPreview} alt="上传签名预览" />
+                    <img src={uploadPreview} alt={t('上传签名预览')} />
                   </div>
                 ) : (
                   <button type="button" className="signature-upload-empty" onClick={() => uploadInputRef.current?.click()}>
                     <ImageUp size={22} />
-                    <strong>上传签名图片</strong>
-                    <span>PNG 透明底最佳，JPG 白底会自动提透</span>
+                    <strong>{t('上传签名图片')}</strong>
+                    <span>{t('PNG 透明底最佳，JPG 白底会自动提透')}</span>
                   </button>
                 )}
                 <input
@@ -335,12 +337,12 @@ export function SignatureStudio({ open, busy, pageCount, selectedCount, onClose,
                 />
                 <button type="button" className="btn btn-secondary btn-sm btn-block" onClick={() => uploadInputRef.current?.click()}>
                   <ImageUp size={12} />
-                  {uploaded ? '更换图片' : '选择图片'}
+                  {uploaded ? t('更换图片') : t('选择图片')}
                 </button>
                 {uploaded ? (
                   <label className="pdf-check">
                     <input type="checkbox" checked={stripWhite} onChange={(event) => setStripWhite(event.target.checked)} />
-                    自动去除白色背景
+                    {t('自动去除白色背景')}
                   </label>
                 ) : null}
               </div>
@@ -348,29 +350,29 @@ export function SignatureStudio({ open, busy, pageCount, selectedCount, onClose,
 
             {mode === 'seal' ? (
               <div className="signature-preview signature-preview-seal">
-                <img src={sealPreview} alt="电子印章预览" />
+                <img src={sealPreview} alt={t('电子印章预览')} />
               </div>
             ) : null}
           </div>
 
           {mode === 'draw' ? (
             <div className="signature-stage-bar">
-              <div className="signature-inks" aria-label="墨色">
+              <div className="signature-inks" aria-label={t('墨色')}>
                 {(Object.keys(SIGNATURE_INK_COLORS) as SignatureInk[]).map((item) => (
                   <button
                     key={item}
                     type="button"
                     className={cn('signature-ink', ink === item && 'active')}
                     style={{ background: SIGNATURE_INK_COLORS[item] }}
-                    title={item === 'ink' ? '墨黑' : item === 'blue' ? '钢蓝' : '朱红'}
-                    aria-label={`墨色 ${item}`}
+                    title={item === 'ink' ? t('墨黑') : item === 'blue' ? t('钢蓝') : t('朱红')}
+                    aria-label={t('墨色 {color}', { color: item })}
                     onClick={() => setInk(item)}
                   />
                 ))}
               </div>
               <button type="button" className="btn btn-ghost btn-sm" onClick={clearPad} disabled={!hasInk}>
                 <Eraser size={12} />
-                清除重写
+                {t('清除重写')}
               </button>
             </div>
           ) : null}
@@ -381,18 +383,18 @@ export function SignatureStudio({ open, busy, pageCount, selectedCount, onClose,
                 className="input"
                 value={typedName}
                 maxLength={12}
-                placeholder="输入姓名或签名文字"
+                placeholder={t('输入姓名或签名文字')}
                 onChange={(event) => setTypedName(event.target.value)}
               />
               <select
                 className="select"
                 value={typedStyle}
                 onChange={(event) => setTypedStyle(event.target.value as SignatureStyle)}
-                aria-label="签名笔体"
+                aria-label={t('签名笔体')}
               >
-                <option value="kai">楷体手写</option>
-                <option value="song">宋体</option>
-                <option value="script">英文花体</option>
+                <option value="kai">{t('楷体手写')}</option>
+                <option value="song">{t('宋体')}</option>
+                <option value="script">{t('英文花体')}</option>
               </select>
             </div>
           ) : null}
@@ -403,7 +405,7 @@ export function SignatureStudio({ open, busy, pageCount, selectedCount, onClose,
                 className="input"
                 value={sealCompany}
                 maxLength={22}
-                placeholder="单位名称"
+                placeholder={t('单位名称')}
                 onChange={(event) => setSealCompany(event.target.value)}
               />
               <div className="signature-seal-row">
@@ -411,7 +413,7 @@ export function SignatureStudio({ open, busy, pageCount, selectedCount, onClose,
                   className="input"
                   value={sealText}
                   maxLength={8}
-                  placeholder="印章文字"
+                  placeholder={t('印章文字')}
                   onChange={(event) => setSealText(event.target.value)}
                 />
                 {['#c0392b', '#b23a2f', '#1f3a68'].map((color) => (
@@ -421,7 +423,7 @@ export function SignatureStudio({ open, busy, pageCount, selectedCount, onClose,
                     className={cn('pdf-swatch', sealColor === color && 'active')}
                     style={{ background: color }}
                     title={color}
-                    aria-label={`印章颜色 ${color}`}
+                    aria-label={t('印章颜色 {color}', { color })}
                     onClick={() => setSealColor(color)}
                   />
                 ))}
@@ -449,20 +451,23 @@ export function SignatureStudio({ open, busy, pageCount, selectedCount, onClose,
               </span>
             </div>
             <div className="signature-stage-preview-body">
-              <div className="signature-control-title">落点预览</div>
+              <div className="signature-control-title">{t('落点预览')}</div>
               <p>
-                {PLACES.find((item) => item.id === place)?.label ?? '右下角'} · 宽{' '}
-                {Math.round(widthRatio * 100)}% · 浓度 {Math.round(opacity * 100)}%
+                {t('{place} · 宽 {width}% · 浓度 {opacity}%', {
+                  place: t(PLACES.find((item) => item.id === place)?.label ?? '右下角'),
+                  width: Math.round(widthRatio * 100),
+                  opacity: Math.round(opacity * 100),
+                })}
               </p>
-              <p>写入范围：{scopeLabel}</p>
-              <small>示意图按 A4 比例换算，实际落点以页边距 42pt 计算。</small>
+              <p>{t('写入范围：{scope}', { scope: scopeLabel })}</p>
+              <small>{t('示意图按 A4 比例换算，实际落点以页边距 42pt 计算。')}</small>
             </div>
           </div>
         </section>
 
         <aside className="signature-controls">
           <div className="signature-control-group">
-            <div className="signature-control-title">落地位置</div>
+            <div className="signature-control-title">{t('落地位置')}</div>
             <div className="signature-place-grid">
               {PLACES.map((item) => (
                 <button
@@ -472,12 +477,12 @@ export function SignatureStudio({ open, busy, pageCount, selectedCount, onClose,
                   onClick={() => setPlace(item.id)}
                 >
                   <span className={`signature-place-dot place-${item.id}`} aria-hidden />
-                  {item.label}
+                  {t(item.label)}
                 </button>
               ))}
             </div>
             <label className="pdf-range">
-              <span>宽度</span>
+              <span>{t('宽度')}</span>
               <input
                 type="range"
                 min={14}
@@ -488,7 +493,7 @@ export function SignatureStudio({ open, busy, pageCount, selectedCount, onClose,
               <em>{Math.round(widthRatio * 100)}%</em>
             </label>
             <label className="pdf-range">
-              <span>浓度</span>
+              <span>{t('浓度')}</span>
               <input
                 type="range"
                 min={45}
@@ -501,50 +506,50 @@ export function SignatureStudio({ open, busy, pageCount, selectedCount, onClose,
           </div>
 
           <div className="signature-control-group">
-            <div className="signature-control-title">写入范围</div>
+            <div className="signature-control-title">{t('写入范围')}</div>
             <select
               className="select"
               value={scope}
-              aria-label="签名写入范围"
+              aria-label={t('签名写入范围')}
               onChange={(event) => setScope(event.target.value as SignatureScope)}
             >
-              <option value="last">仅最后一页</option>
-              <option value="first">仅第一页</option>
+              <option value="last">{t('仅最后一页')}</option>
+              <option value="first">{t('仅第一页')}</option>
               <option value="selection" disabled={!selectedCount}>
-                所选页面（{selectedCount} 页）
+                {t('所选页面（{count} 页）', { count: selectedCount })}
               </option>
-              <option value="all">全部 {pageCount} 页</option>
+              <option value="all">{t('全部 {count} 页', { count: pageCount })}</option>
             </select>
             <p className="hint">
               {scope === 'selection' && !selectedCount
-                ? '尚未在图库中选择页面，将回退到最后一页。'
-                : '批量盖章可选择全部页面；签署合同通常落在最后一页。'}
+                ? t('尚未在图库中选择页面，将回退到最后一页。')
+                : t('批量盖章可选择全部页面；签署合同通常落在最后一页。')}
             </p>
           </div>
 
           {mode !== 'seal' ? (
             <div className="signature-control-group">
-              <div className="signature-control-title">签署信息</div>
+              <div className="signature-control-title">{t('签署信息')}</div>
               <label className="pdf-check">
                 <input type="checkbox" checked={showCaption} onChange={(event) => setShowCaption(event.target.checked)} />
-                在签名下方注明签署人与日期
+                {t('在签名下方注明签署人与日期')}
               </label>
               {showCaption ? (
                 <input
                   className="input"
                   value={signer}
                   maxLength={16}
-                  placeholder="签署人姓名（可留空）"
+                  placeholder={t('签署人姓名（可留空）')}
                   onChange={(event) => setSigner(event.target.value)}
                 />
               ) : null}
-              <p className="hint">日期取本机时间，只写入 PDF 图层，不生成任何在线证书。</p>
+              <p className="hint">{t('日期取本机时间，只写入 PDF 图层，不生成任何在线证书。')}</p>
             </div>
           ) : null}
 
           <div className="signature-target">
             <Stamp size={13} />
-            <span>将写入：{scopeLabel}</span>
+            <span>{t('将写入：{scope}', { scope: scopeLabel })}</span>
           </div>
         </aside>
       </div>

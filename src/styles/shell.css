@@ -1674,3 +1674,11 @@
     opacity: 1;
   }
 }
+
+/* 导航标签：英文单词较长时收缩显示，避免溢出窄栏 */
+.rail-btn > span {
+  max-width: 46px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

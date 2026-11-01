@@ -3,9 +3,10 @@ import { createPortal } from 'react-dom'
 import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useUI } from '../store/ui'
+import { t } from '../i18n'
 
 export function Logo({ size = 38 }: { size?: number }) {
-  return <img src="/logo.svg" width={size} height={size} alt="若道办公" draggable={false} />
+  return <img src="/logo.svg" width={size} height={size} alt={t('若道办公')} draggable={false} />
 }
 
 export function Kbd({ children }: { children: ReactNode }) {
@@ -67,7 +68,7 @@ export function Modal({ open, onClose, title, description, children, footer, wid
               {description && <p className="modal-desc">{description}</p>}
             </div>
             {!hideClose && (
-              <button type="button" className="icon-btn" onClick={onClose} aria-label="关闭">
+              <button type="button" className="icon-btn" onClick={onClose} aria-label={t('关闭')}>
                 <X size={17} />
               </button>
             )}
@@ -91,7 +92,7 @@ interface ConfirmProps {
   onClose: () => void
 }
 
-export function ConfirmDialog({ open, title, description, confirmText = '确认删除', danger = true, onConfirm, onClose }: ConfirmProps) {
+export function ConfirmDialog({ open, title, description, confirmText = t('确认删除'), danger = true, onConfirm, onClose }: ConfirmProps) {
   return (
     <Modal
       open={open}
@@ -101,7 +102,7 @@ export function ConfirmDialog({ open, title, description, confirmText = '确认�
       footer={
         <>
           <button type="button" className="btn btn-ghost" onClick={onClose}>
-            取消
+            {t('取消')}
           </button>
           <button
             type="button"

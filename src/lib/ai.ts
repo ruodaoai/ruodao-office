@@ -1,4 +1,5 @@
 import type { AiConfig, AiMessage, AiProviderId } from '../types'
+import { t } from '../i18n'
 import { useAuth } from '../store/auth'
 
 export interface ProviderPreset {
@@ -88,7 +89,7 @@ export function contextBlock(context: { title: string; text: string } | null, li
 
 function endpointOf(baseUrl: string): string {
   const clean = baseUrl.trim().replace(/\/+$/, '')
-  if (!clean) throw new Error('请先填写 API 地址')
+  if (!clean) throw new Error(t('请先填写 API 地址'))
   if (clean.endsWith('/chat/completions')) return clean
   return `${clean}/chat/completions`
 }
@@ -103,7 +104,9 @@ export interface StreamOptions {
 
 export async function streamChat({ config, messages, system = AI_SYSTEM_PROMPT, signal, onDelta }: StreamOptions): Promise<string> {
   if (!config.model.trim()) {
-    throw new Error(config.provider === 'ruodao' ? '请先在设置中选择一个云端模型' : '请先填写模型名称')
+    throw new Error(
+      config.provider === 'ruodao' ? t('请先在设置中选择一个云端模型') : t('请先填写模型名称'),
+    )
   }
   const cloud = config.provider === 'ruodao'
   const payload = JSON.stringify({
@@ -136,8 +139,10 @@ export async function streamChat({ config, messages, system = AI_SYSTEM_PROMPT, 
     if (cloud && (message.includes('若道') || message.includes('登录'))) throw new Error(message)
     throw new Error(
       cloud
-        ? '无法连接若道云端，请检查网络或若道服务地址。'
-        : `无法连接到 ${config.provider === 'ollama' ? '本地 Ollama' : '模型服务'}，请检查地址与网络。`,
+        ? t('无法连接若道云端，请检查网络或若道服务地址。')
+        : t('无法连接到 {target}，请检查地址与网络。', {
+            target: config.provider === 'ollama' ? t('本地 Ollama') : t('模型服务'),
+          }),
     )
   }
 
@@ -150,14 +155,20 @@ export async function streamChat({ config, messages, system = AI_SYSTEM_PROMPT, 
       /* ignore */
     }
     if (response.status === 401 || response.status === 403) {
-      throw new Error(cloud ? '若道登录已过期，请重新登录。' : '鉴权失败，请检查 API Key。')
+      throw new Error(cloud ? t('若道登录已过期，请重新登录。') : t('鉴权失败，请检查 API Key。'))
     }
     if (response.status === 402) {
-      throw new Error('若道账户余额不足，请先在若道充值，或切换到本地 / 自有 Key 模型。')
+      throw new Error(t('若道账户余额不足，请先在若道充值，或切换到本地 / 自有 Key 模型。'))
     }
-    if (response.status === 404) throw new Error(`接口或模型不存在（${config.model}），请检查配置。`)
-    if (response.status === 429) throw new Error('请求过于频繁，请稍后再试。')
-    throw new Error(detail ? `模型返回错误：${detail}` : `模型服务返回 ${response.status}`)
+    if (response.status === 404) {
+      throw new Error(t('接口或模型不存在（{model}），请检查配置。', { model: config.model }))
+    }
+    if (response.status === 429) throw new Error(t('请求过于频繁，请稍后再试。'))
+    throw new Error(
+      detail
+        ? t('模型返回错误：{detail}', { detail })
+        : t('模型服务返回 {status}', { status: response.status }),
+    )
   }
 
   const contentType = response.headers.get('content-type') ?? ''
@@ -199,16 +210,16 @@ export async function streamChat({ config, messages, system = AI_SYSTEM_PROMPT, 
       }
     }
   }
-  if (!full.trim()) throw new Error('模型没有返回内容，请检查模型名或稍后重试。')
+  if (!full.trim()) throw new Error(t('模型没有返回内容，请检查模型名或稍后重试。'))
   return full
 }
 
 export async function testConnection(config: AiConfig): Promise<string> {
   if (config.provider === 'ruodao') {
-    if (!useAuth.getState().session) throw new Error('请先登录若道账户')
+    if (!useAuth.getState().session) throw new Error(t('请先登录若道账户'))
     const models = await useAuth.getState().loadModels()
-    if (!models.length) throw new Error('当前账户没有可用的云端模型')
-    return `云端已连接 · ${models.length} 个模型可用`
+    if (!models.length) throw new Error(t('当前账户没有可用的云端模型'))
+    return t('云端已连接 · {count} 个模型可用', { count: models.length })
   }
   const endpoint = endpointOf(config.baseUrl)
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -224,9 +235,13 @@ export async function testConnection(config: AiConfig): Promise<string> {
     }),
   })
   if (!response.ok) {
-    throw new Error(response.status === 401 ? 'API Key 无效' : `连接失败（${response.status}）`)
+    throw new Error(
+      response.status === 401
+        ? t('API Key 无效')
+        : t('连接失败（{status}）', { status: response.status }),
+    )
   }
-  return '连接成功'
+  return t('连接成功')
 }
 
 const STOPWORDS = new Set([
@@ -279,11 +294,14 @@ export function localAnalyze(text: string): LocalInsight {
 
   const summary = chosen.length
     ? chosen.map((c) => `- ${c.sentence}`).join('\n')
-    : '- 内容较短，暂时无法提取摘要。'
+    : t('- 内容较短，暂时无法提取摘要。')
 
   return { summary, keywords }
 }
 
 export function localSummaryMarkdown({ summary, keywords }: LocalInsight): string {
-  return `**离线摘要 · 本地计算**（未使用模型）\n\n${summary}\n\n**关键词**：${keywords.join('、') || '—'}`
+  return t('**离线摘要 · 本地计算**（未使用模型）\n\n{summary}\n\n**关键词**：{keywords}', {
+    summary,
+    keywords: keywords.join('、') || '—',
+  })
 }

@@ -6,6 +6,7 @@ import {
   readFileAsArrayBuffer,
   readFileAsText,
 } from '../utils'
+import { t } from '../../i18n'
 import { fileBase, fileExtension } from './formats'
 
 export interface DocOptions {
@@ -141,10 +142,10 @@ export function documentToHtml(title: string, body: string, sourceLabel: string)
 <header>
   <div class="kicker">Ruodao Office · Local document</div>
   ${hasHeading ? '' : `<h1>${escapeHtml(title)}</h1>`}
-  <div class="meta">${escapeHtml(sourceLabel)} · ${escapeHtml(TODAY)} · 由若道办公本地导出</div>
+  <div class="meta">${escapeHtml(t('{source} · {date} · 由若道办公本地导出', { source: sourceLabel, date: TODAY }))}</div>
 </header>
 <article>${body}</article>
-<footer><span>若道办公 · 文件未离开本机</span><span>${escapeHtml(title)}</span></footer>
+<footer><span>${t('若道办公 · 文件未离开本机')}</span><span>${escapeHtml(title)}</span></footer>
 </main>
 </body>
 </html>`
@@ -179,7 +180,7 @@ export async function documentToEpub(title: string, html: string): Promise<Blob>
     <dc:identifier id="bookid">${identifier}</dc:identifier>
     <dc:title>${bookTitle}</dc:title>
     <dc:language>zh-CN</dc:language>
-    <dc:creator>若道办公</dc:creator>
+    <dc:creator>${escapeHtml(t('若道办公'))}</dc:creator>
     <meta property="dcterms:modified">${new Date().toISOString().replace(/\.\d+Z$/, 'Z')}</meta>
   </metadata>
   <manifest>
@@ -211,8 +212,8 @@ footer { color: #7a7369; font-size: 0.8em; margin-top: 2em; border-top: 1px soli
     `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="zh-CN" lang="zh-CN">
-<head><title>目录</title></head>
-<body><nav epub:type="toc" id="toc"><h1>目录</h1><ol><li><a href="content.xhtml">正文</a></li></ol></nav></body>
+<head><title>${t('目录')}</title></head>
+<body><nav epub:type="toc" id="toc"><h1>${t('目录')}</h1><ol><li><a href="content.xhtml">${t('正文')}</a></li></ol></nav></body>
 </html>`,
   )
   zip.file(
@@ -223,7 +224,7 @@ footer { color: #7a7369; font-size: 0.8em; margin-top: 2em; border-top: 1px soli
 <head><title>${bookTitle}</title><link rel="stylesheet" type="text/css" href="style.css"/></head>
 <body>
 ${xhtmlBody}
-<footer>由若道办公本地导出 · ${escapeHtml(TODAY)}</footer>
+<footer>${t('由若道办公本地导出 · {date}', { date: TODAY })}</footer>
 </body>
 </html>`,
   )
@@ -438,7 +439,7 @@ class DocumentLayout {
     this.lineHeight = Math.round(options.fontSize * 1.78)
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
-    if (!ctx) throw new Error('无法创建文档画布')
+    if (!ctx) throw new Error(t('无法创建文档画布'))
     this.canvas = canvas
     this.context = ctx
   }
@@ -482,7 +483,7 @@ class DocumentLayout {
     this.canvas.width = this.pageWidth * CANVAS_SCALE
     this.canvas.height = this.pageHeight * CANVAS_SCALE
     const ctx = this.canvas.getContext('2d')
-    if (!ctx) throw new Error('无法创建文档画布')
+    if (!ctx) throw new Error(t('无法创建文档画布'))
     ctx.scale(CANVAS_SCALE, CANVAS_SCALE)
     ctx.fillStyle = '#fffdf9'
     ctx.fillRect(0, 0, this.pageWidth, this.pageHeight)
@@ -514,7 +515,7 @@ class DocumentLayout {
     ctx.stroke()
     ctx.fillStyle = MUTED
     ctx.font = `400 8.5px ${SANS}`
-    ctx.fillText('若道办公 · 本地导出', MARGIN_X, this.pageHeight - 40)
+    ctx.fillText(t('若道办公 · 本地导出'), MARGIN_X, this.pageHeight - 40)
     ctx.textAlign = 'right'
     ctx.font = `500 8.5px ${MONO}`
     ctx.fillText(`PAGE ${String(this.pageNo).padStart(2, '0')}`, this.pageWidth - MARGIN_X, this.pageHeight - 40)
@@ -528,7 +529,7 @@ class DocumentLayout {
 
   private ensure(height: number): void {
     if (this.y + height <= this.bottom) return
-    if (this.pages.length > 260) throw new Error('文档页数过多，请拆分后再转换')
+    if (this.pages.length > 260) throw new Error(t('文档页数过多，请拆分后再转换'))
     this.newPage()
   }
 
@@ -536,7 +537,7 @@ class DocumentLayout {
     const ctx = this.context
     ctx.fillStyle = ACCENT
     ctx.font = `600 8.5px ${MONO}`
-    ctx.fillText('LOCAL DOCUMENT / 本地文档', MARGIN_X, this.y + 4)
+    ctx.fillText(t('LOCAL DOCUMENT / 本地文档'), MARGIN_X, this.y + 4)
     this.y += 22
     ctx.fillStyle = INK
     ctx.font = `700 27px ${SERIF}`
@@ -549,7 +550,7 @@ class DocumentLayout {
     ctx.fillStyle = MUTED
     ctx.font = `400 10px ${SANS}`
     this.y += 4
-    ctx.fillText(`由若道办公导出 · ${TODAY}`, MARGIN_X, this.y + 10)
+    ctx.fillText(t('由若道办公导出 · {date}', { date: TODAY }), MARGIN_X, this.y + 10)
     this.y += 22
     ctx.strokeStyle = ACCENT
     ctx.lineWidth = 1.5
@@ -746,7 +747,7 @@ class DocumentLayout {
         ctx.fillStyle = MUTED
         ctx.font = `italic 400 ${this.baseSize - 1}px ${SANS}`
         this.ensure(this.lineHeight)
-        ctx.fillText(`［图片：${block.alt.trim()}］`, MARGIN_X, this.y + this.lineHeight * 0.72)
+        ctx.fillText(t('［图片：{alt}］', { alt: block.alt.trim() }), MARGIN_X, this.y + this.lineHeight * 0.72)
         this.y += this.lineHeight + 8
       }
       return
@@ -784,16 +785,16 @@ export async function htmlToPdfBlob(
   options: DocOptions,
   onProgress?: (ratio: number, label?: string) => void,
 ): Promise<Uint8Array> {
-  onProgress?.(0.05, '整理文档结构')
+  onProgress?.(0.05, t('整理文档结构'))
   const blocks = await blocksFromHtml(html)
-  if (!blocks.length) throw new Error('这份文档没有可排版的正文')
-  onProgress?.(0.14, '加载图片')
+  if (!blocks.length) throw new Error(t('这份文档没有可排版的正文'))
+  onProgress?.(0.14, t('加载图片'))
   const layout = new DocumentLayout(title, options)
   await layout.loadImages(blocks)
-  onProgress?.(0.24, '排版分页')
+  onProgress?.(0.24, t('排版分页'))
   const pages = layout.layout(blocks)
-  if (!pages.length) throw new Error('排版失败')
-  onProgress?.(0.52, `渲染 ${pages.length} 页`)
+  if (!pages.length) throw new Error(t('排版失败'))
+  onProgress?.(0.52, t('渲染 {n} 页', { n: pages.length }))
   const { PDFDocument } = await import('pdf-lib')
   const doc = await PDFDocument.create()
   const [pageWidth, pageHeight] = options.pageSize === 'a4' ? [595.28, 841.89] : [612, 792]
@@ -805,7 +806,7 @@ export async function htmlToPdfBlob(
     const image = await doc.embedJpg(bytes)
     const page = doc.addPage([pageWidth, pageHeight])
     page.drawImage(image, { x: 0, y: 0, width: pageWidth, height: pageHeight })
-    onProgress?.(0.52 + (0.46 * (index + 1)) / pages.length, `写入第 ${index + 1} 页`)
+    onProgress?.(0.52 + (0.46 * (index + 1)) / pages.length, t('写入第 {n} 页', { n: index + 1 }))
     if (index % 4 === 0) await new Promise((resolve) => setTimeout(resolve, 0))
   }
   const output = await doc.save()
@@ -845,7 +846,7 @@ export function htmlToMarkdown(html: string): string {
       const src = node.getAttribute('src') ?? ''
       const alt = node.getAttribute('alt') ?? ''
       if (/^https?:/i.test(src)) return `![${alt}](${src})`
-      return alt ? `*[图片：${alt}]*` : '*[图片]*'
+      return alt ? `*${t('[图片：{alt}]', { alt })}*` : `*${t('[图片]')}*`
     }
     return children
   }

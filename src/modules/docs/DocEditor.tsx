@@ -61,6 +61,7 @@ import {
 } from '../../lib/utils'
 import { useLibrary } from '../../store/library'
 import { useUI } from '../../store/ui'
+import { localeTag, useT } from '../../i18n'
 
 type AlignKind = 'left' | 'center' | 'right' | 'justify'
 
@@ -262,6 +263,7 @@ function ToolButton({
 }
 
 export function DocEditor({ doc }: { doc: DocRecord }) {
+  const t = useT()
   const updateDoc = useLibrary((s) => s.updateDoc)
   const deleteFile = useLibrary((s) => s.deleteFile)
   const askAi = useUI((s) => s.askAi)
@@ -548,7 +550,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
       } catch (error) {
         if (cancelled) return
         setSourceLoading(false)
-        setSourceError((error as Error).message || '原稿渲染失败')
+        setSourceError((error as Error).message || t('原稿渲染失败'))
       }
     })()
     return () => {
@@ -590,7 +592,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
       const text = editor ? htmlToText(editor.innerHTML) : htmlToText(doc.html)
       return {
         kind: 'doc',
-        title: titleRef.current.trim() || '未命名文档',
+        title: titleRef.current.trim() || t('未命名文档'),
         text,
       }
     })
@@ -630,9 +632,9 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
       insertHtml(
         `<img src="${dataUrl}" alt="${escapeHtml(file.name)}" style="width:${displayWidth}px;max-width:100%"><p><br></p>`,
       )
-      toast('图片已插入，并压缩后存到本机', 'success')
+      toast(t('图片已插入，并压缩后存到本机'), 'success')
     } catch (error) {
-      toast((error as Error).message || '图片插入失败', 'error')
+      toast((error as Error).message || t('图片插入失败'), 'error')
     }
   }
 
@@ -642,7 +644,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
     if (titleTimer.current) window.clearTimeout(titleTimer.current)
     titleTimer.current = window.setTimeout(() => {
       titleTimer.current = undefined
-      updateDoc(doc.id, { title: value.trim() || '未命名文档' })
+      updateDoc(doc.id, { title: value.trim() || t('未命名文档') })
     }, 320)
   }
 
@@ -651,7 +653,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
       window.clearTimeout(titleTimer.current)
       titleTimer.current = undefined
     }
-    const next = title.trim() || '未命名文档'
+    const next = title.trim() || t('未命名文档')
     if (!title.trim()) {
       setTitle(next)
       titleRef.current = next
@@ -664,14 +666,16 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
   const exportDocx = async () => {
     setExporting(true)
     try {
-      const { blob, skippedImages } = await exportToDocx(currentHtml(), title.trim() || '未命名文档')
-      downloadBlob(blob, safeFilename(title.trim() || '未命名文档', 'docx'))
+      const { blob, skippedImages } = await exportToDocx(currentHtml(), title.trim() || t('未命名文档'))
+      downloadBlob(blob, safeFilename(title.trim() || t('未命名文档'), 'docx'))
       toast(
-        skippedImages ? `DOCX 已导出，${skippedImages} 张图片未包含在 Word 中` : 'Word 文档已导出',
+        skippedImages
+          ? t('DOCX 已导出，{n} 张图片未包含在 Word 中', { n: skippedImages })
+          : t('Word 文档已导出'),
         skippedImages ? 'info' : 'success',
       )
     } catch (error) {
-      toast((error as Error).message || '导出失败，请重试', 'error')
+      toast((error as Error).message || t('导出失败，请重试'), 'error')
     } finally {
       setExporting(false)
     }
@@ -686,9 +690,9 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
         safeFilename(title.trim() || source.name, 'docx'),
         source.type || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       )
-      toast('已导出原始 Word 文件', 'success')
+      toast(t('已导出原始 Word 文件'), 'success')
     } catch {
-      toast('原稿数据无法读取，请重新导入', 'error')
+      toast(t('原稿数据无法读取，请重新导入'), 'error')
     }
   }
 
@@ -698,9 +702,11 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
     setSyncingSource(true)
     try {
       const html = sanitizeDocHtml(currentHtml())
-      const { blob, skippedImages } = await exportToDocx(html, title.trim() || '未命名文档')
+      const { blob, skippedImages } = await exportToDocx(html, title.trim() || t('未命名文档'))
       const bytes = new Uint8Array(await blob.arrayBuffer())
-      const name = /\.docx$/i.test(source.name) ? source.name : `${safeFilename(title.trim() || '未命名文档', 'docx')}`
+      const name = /\.docx$/i.test(source.name)
+        ? source.name
+        : `${safeFilename(title.trim() || t('未命名文档'), 'docx')}`
       updateDoc(doc.id, {
         sourceDocx: {
           name,
@@ -716,25 +722,25 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
       setBaseline(html)
       toast(
         skippedImages
-          ? `原稿已用当前内容更新，${skippedImages} 张图片未包含在 Word 中`
-          : '原稿已用当前内容更新，之后打开会显示最新版本',
+          ? t('原稿已用当前内容更新，{n} 张图片未包含在 Word 中', { n: skippedImages })
+          : t('原稿已用当前内容更新，之后打开会显示最新版本'),
         skippedImages ? 'info' : 'success',
       )
     } catch (error) {
-      toast((error as Error).message || '更新原稿失败，请重试', 'error')
+      toast((error as Error).message || t('更新原稿失败，请重试'), 'error')
     } finally {
       setSyncingSource(false)
     }
   }
 
   const exportHtml = () => {
-    const name = title.trim() || '未命名文档'
+    const name = title.trim() || t('未命名文档')
     downloadText(buildStandaloneHtml(name, currentHtml()), safeFilename(name, 'html'), 'text/html')
-    toast('HTML 已导出', 'success')
+    toast(t('HTML 已导出'), 'success')
   }
 
   const printPdf = () => {
-    const name = title.trim() || '未命名文档'
+    const name = title.trim() || t('未命名文档')
     const frame = document.createElement('iframe')
     frame.setAttribute('aria-hidden', 'true')
     frame.style.cssText = 'position:fixed;left:-10000px;top:0;width:760px;height:1000px;border:0;'
@@ -742,7 +748,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
     const win = frame.contentWindow
     if (!win) {
       frame.remove()
-      toast('当前浏览器无法打开打印窗口', 'error')
+      toast(t('当前浏览器无法打开打印窗口'), 'error')
       return
     }
     win.document.open()
@@ -753,11 +759,11 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
         win.focus()
         win.print()
       } catch {
-        toast('打印窗口被浏览器拦截', 'error')
+        toast(t('打印窗口被浏览器拦截'), 'error')
       }
       window.setTimeout(() => frame.remove(), 2000)
     }, 360)
-    toast('已打开打印窗口，请选择「另存为 PDF」', 'info')
+    toast(t('已打开打印窗口，请选择「另存为 PDF」'), 'info')
   }
 
   const openLinkDialog = () => {
@@ -787,7 +793,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
   const confirmTable = () => {
     const rows = clamp(Number(tableSize.rows) || 3, 1, 10)
     const cols = clamp(Number(tableSize.cols) || 3, 1, 8)
-    const header = Array.from({ length: cols }, (_, i) => `<th>列 ${i + 1}</th>`).join('')
+    const header = Array.from({ length: cols }, (_, i) => `<th>${t('列 {n}', { n: i + 1 })}</th>`).join('')
     const body = Array.from({ length: Math.max(0, rows - 1) }, () =>
       `<tr>${Array.from({ length: cols }, () => '<td><br></td>').join('')}</tr>`,
     ).join('')
@@ -809,7 +815,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
     setBubble(null)
   }
 
-  const createdLabel = new Date(doc.createdAt).toLocaleDateString('zh-CN', {
+  const createdLabel = new Date(doc.createdAt).toLocaleDateString(localeTag(), {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -826,39 +832,39 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
                 {doc.sourceDocx.name}
               </span>
               <span className={cn('doc-mode-badge', sourceDirty && 'is-dirty')}>
-                {sourceDirty ? '原稿待同步' : '原稿已保留'}
+                {sourceDirty ? t('原稿待同步') : t('原稿已保留')}
               </span>
             </span>
-            <div className="segmented doc-mode-switch" role="group" aria-label="文档视图">
+            <div className="segmented doc-mode-switch" role="group" aria-label={t('文档视图')}>
               <button
                 type="button"
                 className={view === 'edit' ? 'active' : undefined}
                 aria-pressed={view === 'edit'}
-                title="转为可编辑文本，版式会按网页排版重新近似还原"
+                title={t('转为可编辑文本，版式会按网页排版重新近似还原')}
                 onClick={() => setView('edit')}
               >
                 <PenLine size={12} />
-                编辑
+                {t('编辑')}
               </button>
               <button
                 type="button"
                 className={view === 'source' ? 'active' : undefined}
                 aria-pressed={view === 'source'}
-                title="按 Word 原始版式渲染，与 WPS 打开效果一致"
+                title={t('按 Word 原始版式渲染，与 WPS 打开效果一致')}
                 onClick={() => setView('source')}
               >
                 <FileType2 size={12} />
-                原稿
+                {t('原稿')}
               </button>
             </div>
           </div>
         )}
 
         {view === 'edit' && (
-        <div className="doc-toolbar" role="toolbar" aria-label="文档格式工具">
+        <div className="doc-toolbar" role="toolbar" aria-label={t('文档格式工具')}>
           <div className="doc-tool-group">
             <ToolButton
-              label="撤销"
+              label={t('撤销')}
               onClick={() => {
                 editorRef.current?.focus()
                 document.execCommand('undo')
@@ -868,7 +874,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
               <Undo2 size={15} />
             </ToolButton>
             <ToolButton
-              label="重做"
+              label={t('重做')}
               onClick={() => {
                 editorRef.current?.focus()
                 document.execCommand('redo')
@@ -884,43 +890,51 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
           <select
             className="doc-select doc-block-select"
             value={format.block}
-            aria-label="段落样式"
+            aria-label={t('段落样式')}
             onChange={(event) => applyCommand('formatBlock', `<${event.target.value}>`)}
           >
-            <option value="p">正文</option>
-            <option value="h1">标题 1</option>
-            <option value="h2">标题 2</option>
-            <option value="h3">标题 3</option>
-            <option value="blockquote">引用</option>
-            <option value="pre">代码块</option>
+            <option value="p">{t('正文')}</option>
+            <option value="h1">{t('标题 1')}</option>
+            <option value="h2">{t('标题 2')}</option>
+            <option value="h3">{t('标题 3')}</option>
+            <option value="blockquote">{t('引用')}</option>
+            <option value="pre">{t('代码块')}</option>
           </select>
 
           <select
             className="doc-select doc-size-select"
             defaultValue="3"
-            aria-label="字号"
+            aria-label={t('字号')}
             onChange={(event) => applyCommand('fontSize', event.target.value)}
           >
-            <option value="2">小 13</option>
-            <option value="3">正文 16</option>
-            <option value="4">中 18</option>
-            <option value="5">大 24</option>
-            <option value="6">特大 32</option>
+            <option value="2">{t('小 13')}</option>
+            <option value="3">{t('正文 16')}</option>
+            <option value="4">{t('中 18')}</option>
+            <option value="5">{t('大 24')}</option>
+            <option value="6">{t('特大 32')}</option>
           </select>
 
           <span className="doc-tool-sep" />
 
           <div className="doc-tool-group">
-            <ToolButton label="加粗" active={format.bold} onClick={() => applyCommand('bold')}>
+            <ToolButton label={t('加粗')} active={format.bold} onClick={() => applyCommand('bold')}>
               <Bold size={15} />
             </ToolButton>
-            <ToolButton label="斜体" active={format.italic} onClick={() => applyCommand('italic')}>
+            <ToolButton label={t('斜体')} active={format.italic} onClick={() => applyCommand('italic')}>
               <Italic size={15} />
             </ToolButton>
-            <ToolButton label="下划线" active={format.underline} onClick={() => applyCommand('underline')}>
+            <ToolButton
+              label={t('下划线')}
+              active={format.underline}
+              onClick={() => applyCommand('underline')}
+            >
               <Underline size={15} />
             </ToolButton>
-            <ToolButton label="删除线" active={format.strike} onClick={() => applyCommand('strikeThrough')}>
+            <ToolButton
+              label={t('删除线')}
+              active={format.strike}
+              onClick={() => applyCommand('strikeThrough')}
+            >
               <Strikethrough size={15} />
             </ToolButton>
           </div>
@@ -930,7 +944,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
           <Dropdown
             className="doc-tool-btn doc-tool-drop"
             align="left"
-            title="文字颜色"
+            title={t('文字颜色')}
             trigger={
               <>
                 <span className="doc-color-glyph">A</span>
@@ -940,7 +954,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
           >
             {(close) => (
               <>
-                <div className="menu-label">文字颜色</div>
+                <div className="menu-label">{t('文字颜色')}</div>
                 <div className="doc-swatches">
                   {TEXT_COLORS.map((color) => (
                     <button
@@ -948,8 +962,8 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
                       type="button"
                       className="doc-swatch"
                       style={{ background: color.value }}
-                      title={color.name}
-                      aria-label={color.name}
+                      title={t(color.name)}
+                      aria-label={t(color.name)}
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => {
                         applyCommand('foreColor', color.value)
@@ -959,7 +973,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
                   ))}
                 </div>
                 <label className="doc-custom-color">
-                  自定义
+                  {t('自定义')}
                   <input
                     type="color"
                     defaultValue="#201e1a"
@@ -976,7 +990,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
           <Dropdown
             className="doc-tool-btn doc-tool-drop"
             align="left"
-            title="高亮"
+            title={t('高亮')}
             trigger={
               <>
                 <Highlighter size={15} />
@@ -986,7 +1000,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
           >
             {(close) => (
               <>
-                <div className="menu-label">高亮</div>
+                <div className="menu-label">{t('高亮')}</div>
                 <div className="doc-swatches">
                   {HIGHLIGHTS.map((color) => (
                     <button
@@ -994,7 +1008,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
                       type="button"
                       className="doc-swatch"
                       style={{ background: color }}
-                      aria-label="高亮颜色"
+                      aria-label={t('高亮颜色')}
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => {
                         applyCommand('hiliteColor', color)
@@ -1013,7 +1027,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
                   }}
                 >
                   <RemoveFormatting size={13} />
-                  清除高亮
+                  {t('清除高亮')}
                 </button>
               </>
             )}
@@ -1023,28 +1037,28 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
 
           <div className="doc-tool-group">
             <ToolButton
-              label="左对齐"
+              label={t('左对齐')}
               active={format.align === 'left'}
               onClick={() => applyCommand('justifyLeft')}
             >
               <AlignLeft size={15} />
             </ToolButton>
             <ToolButton
-              label="居中"
+              label={t('居中')}
               active={format.align === 'center'}
               onClick={() => applyCommand('justifyCenter')}
             >
               <AlignCenter size={15} />
             </ToolButton>
             <ToolButton
-              label="右对齐"
+              label={t('右对齐')}
               active={format.align === 'right'}
               onClick={() => applyCommand('justifyRight')}
             >
               <AlignRight size={15} />
             </ToolButton>
             <ToolButton
-              label="两端对齐"
+              label={t('两端对齐')}
               active={format.align === 'justify'}
               onClick={() => applyCommand('justifyFull')}
             >
@@ -1056,21 +1070,21 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
 
           <div className="doc-tool-group">
             <ToolButton
-              label="无序列表"
+              label={t('无序列表')}
               active={format.unordered}
               onClick={() => applyCommand('insertUnorderedList')}
             >
               <List size={15} />
             </ToolButton>
             <ToolButton
-              label="有序列表"
+              label={t('有序列表')}
               active={format.ordered}
               onClick={() => applyCommand('insertOrderedList')}
             >
               <ListOrdered size={15} />
             </ToolButton>
             <ToolButton
-              label="引用块"
+              label={t('引用块')}
               active={format.block === 'blockquote'}
               onClick={() => applyCommand('formatBlock', format.block === 'blockquote' ? '<p>' : '<blockquote>')}
             >
@@ -1081,16 +1095,16 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
           <span className="doc-tool-sep" />
 
           <div className="doc-tool-group">
-            <ToolButton label="插入链接" onClick={openLinkDialog}>
+            <ToolButton label={t('插入链接')} onClick={openLinkDialog}>
               <Link2 size={15} />
             </ToolButton>
-            <ToolButton label="插入图片" onClick={() => imageRef.current?.click()}>
+            <ToolButton label={t('插入图片')} onClick={() => imageRef.current?.click()}>
               <ImagePlus size={15} />
             </ToolButton>
-            <ToolButton label="插入表格" onClick={() => setTableOpen(true)}>
+            <ToolButton label={t('插入表格')} onClick={() => setTableOpen(true)}>
               <Table2 size={15} />
             </ToolButton>
-            <ToolButton label="插入分隔线" onClick={() => applyCommand('insertHorizontalRule')}>
+            <ToolButton label={t('插入分隔线')} onClick={() => applyCommand('insertHorizontalRule')}>
               <Minus size={15} />
             </ToolButton>
           </div>
@@ -1098,7 +1112,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
           <span className="doc-tool-sep" />
 
           <ToolButton
-            label="清除格式"
+            label={t('清除格式')}
             onClick={() => {
               applyCommand('removeFormat')
               applyCommand('formatBlock', '<p>')
@@ -1114,7 +1128,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
             className="doc-ai-btn"
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => openAiTask()}
-            title="打开 AI 任务窗口，处理当前文档"
+            title={t('打开 AI 任务窗口，处理当前文档')}
           >
             <Sparkles size={13} />
             AI
@@ -1125,7 +1139,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
             trigger={
               <>
                 <Download size={14} />
-                导出
+                {t('导出')}
                 <ChevronDown size={11} />
               </>
             }
@@ -1142,7 +1156,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
                     }}
                   >
                     <FileType2 size={14} />
-                    {sourceDirty || sourceUntracked ? '导入时的原稿（.docx）' : '原始 Word（.docx）'}
+                    {sourceDirty || sourceUntracked ? t('导入时的原稿（.docx）') : t('原始 Word（.docx）')}
                   </button>
                 )}
                 <button
@@ -1156,10 +1170,10 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
                 >
                   <FileDown size={14} />
                   {exporting
-                    ? '正在生成 DOCX…'
+                    ? t('正在生成 DOCX…')
                     : doc.sourceDocx
-                      ? '编辑版 Word（.docx）'
-                      : 'Word 文档（.docx）'}
+                      ? t('编辑版 Word（.docx）')
+                      : t('Word 文档（.docx）')}
                 </button>
                 <button
                   type="button"
@@ -1170,7 +1184,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
                   }}
                 >
                   <Code2 size={14} />
-                  HTML 网页（.html）
+                  {t('HTML 网页（.html）')}
                 </button>
                 <button
                   type="button"
@@ -1181,7 +1195,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
                   }}
                 >
                   <Printer size={14} />
-                  打印为 PDF
+                  {t('打印为 PDF')}
                 </button>
                 <div className="menu-sep" />
                 <button
@@ -1193,7 +1207,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
                   }}
                 >
                   <Trash2 size={14} />
-                  删除文档…
+                  {t('删除文档…')}
                 </button>
               </>
             )}
@@ -1206,13 +1220,15 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
             <div className="doc-source-view">
               <header className="doc-source-head">
                 <div className="doc-source-caption">
-                  <strong>原稿版式</strong>
-                  <span>与 Word / WPS 打开效果一致，保留分页、页眉页脚与表格。需要修改内容时转为可编辑。</span>
+                  <strong>{t('原稿版式')}</strong>
+                  <span>
+                    {t('与 Word / WPS 打开效果一致，保留分页、页眉页脚与表格。需要修改内容时转为可编辑。')}
+                  </span>
                 </div>
                 <div className="doc-source-actions">
                   <button type="button" className="btn btn-secondary btn-sm" onClick={() => setView('edit')}>
                     <PenLine size={13} />
-                    转为可编辑
+                    {t('转为可编辑')}
                   </button>
                   {sourceDirty || sourceUntracked ? (
                     <button
@@ -1222,12 +1238,12 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
                       disabled={syncingSource}
                     >
                       <RefreshCw size={13} className={syncingSource ? 'spin' : undefined} />
-                      {syncingSource ? '正在生成原稿…' : '用当前内容更新原稿'}
+                      {syncingSource ? t('正在生成原稿…') : t('用当前内容更新原稿')}
                     </button>
                   ) : (
                     <button type="button" className="btn btn-secondary btn-sm" onClick={exportSourceDocx}>
                       <Download size={13} />
-                      下载原稿
+                      {t('下载原稿')}
                     </button>
                   )}
                 </div>
@@ -1236,16 +1252,18 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
                 <div className="doc-source-dirty" role="status">
                   <span className="doc-source-dirty-dot" aria-hidden="true" />
                   <div className="doc-source-dirty-copy">
-                    <strong>{sourceUntracked ? '这是早期导入的原稿' : '原稿是导入时的版本'}</strong>
+                    <strong>{sourceUntracked ? t('这是早期导入的原稿') : t('原稿是导入时的版本')}</strong>
                     <span>
                       {sourceUntracked
-                        ? '编辑内容已单独保存在本机。点击「用当前内容更新原稿」后，原稿预览与导出的 Word 会包含你的修改。'
-                        : '你的修改已保存在本机，并且重新打开时会直接进入编辑视图；原稿预览仍显示导入时的内容。'}
+                        ? t(
+                            '编辑内容已单独保存在本机。点击「用当前内容更新原稿」后，原稿预览与导出的 Word 会包含你的修改。',
+                          )
+                        : t('你的修改已保存在本机，并且重新打开时会直接进入编辑视图；原稿预览仍显示导入时的内容。')}
                     </span>
                   </div>
                   {sourceDirty && (
                     <button type="button" className="btn btn-ghost btn-sm" onClick={() => setView('edit')}>
-                      查看修改
+                      {t('查看修改')}
                     </button>
                   )}
                 </div>
@@ -1253,15 +1271,15 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
               {sourceLoading && (
                 <div className="doc-source-loading">
                   <span className="spinner" style={{ width: 14, height: 14 }} />
-                  正在排版原稿…
+                  {t('正在排版原稿…')}
                 </div>
               )}
               {sourceError && (
                 <div className="doc-source-error">
-                  原稿渲染失败：{sourceError}。可以切换回编辑视图继续修改。
+                  {t('原稿渲染失败：{error}。可以切换回编辑视图继续修改。', { error: sourceError })}
                 </div>
               )}
-              <div ref={sourceBodyRef} className="doc-source-body" aria-label="Word 原稿预览" />
+              <div ref={sourceBodyRef} className="doc-source-body" aria-label={t('Word 原稿预览')} />
               <div ref={sourceStyleRef} className="doc-source-styles" />
             </div>
           </div>
@@ -1278,8 +1296,8 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
                 ref={titleInputRef}
                 className="doc-title-input"
                 value={title}
-                placeholder="未命名文档"
-                aria-label="文档标题"
+                placeholder={t('未命名文档')}
+                aria-label={t('文档标题')}
                 spellCheck={false}
                 onChange={(event) => handleTitleChange(event.target.value)}
                 onBlur={handleTitleBlur}
@@ -1291,13 +1309,13 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
                 }}
               />
               <div className="doc-meta">
-                <span className="tabular">{stats.words} 字</span>
+                <span className="tabular">{t('{n} 字', { n: stats.words })}</span>
                 <span className="doc-meta-dot">·</span>
-                <span className="tabular">{stats.chars} 字符</span>
+                <span className="tabular">{t('{n} 字符', { n: stats.chars })}</span>
                 <span className="spacer" />
                 <span className="doc-meta-save">
                   <span className="dot dot-green" />
-                  自动保存到本机
+                  {t('自动保存到本机')}
                 </span>
               </div>
               <div className="doc-title-rule" />
@@ -1310,10 +1328,10 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
               suppressContentEditableWarning
               role="textbox"
               aria-multiline="true"
-              aria-label="文档正文"
+              aria-label={t('文档正文')}
               spellCheck={false}
               data-empty="false"
-              data-placeholder="从这里开始写，内容会自动保存在本机…"
+              data-placeholder={t('从这里开始写，内容会自动保存在本机…')}
               onInput={handleInput}
               onBlur={() => {
                 if (commitTimer.current) {
@@ -1334,9 +1352,9 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
             />
           </div>
           <div className="doc-canvas-foot">
-            <span>草稿保存在这台设备</span>
+            <span>{t('草稿保存在这台设备')}</span>
             <span className="doc-canvas-foot-sep" />
-            <span>选中文字可直接交给 AI 润色或续写</span>
+            <span>{t('选中文字可直接交给 AI 润色或续写')}</span>
           </div>
         </div>
         )}
@@ -1347,19 +1365,19 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
           className="doc-ai-bubble"
           style={{ top: bubble.top, left: bubble.left }}
           role="toolbar"
-          aria-label="AI 文字操作"
+          aria-label={t('AI 文字操作')}
         >
           <span className="doc-ai-bubble-mark">
             <Sparkles size={12} />
           </span>
           <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => runAi('polish')}>
-            润色
+            {t('润色')}
           </button>
           <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => runAi('summary')}>
-            总结
+            {t('总结')}
           </button>
           <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => runAi('continue')}>
-            续写
+            {t('续写')}
           </button>
         </div>
       )}
@@ -1379,23 +1397,23 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
       <Modal
         open={linkOpen}
         onClose={() => setLinkOpen(false)}
-        title="插入链接"
-        description="选中的文字会变成链接；如果没有选中文字，将插入链接地址本身。"
+        title={t('插入链接')}
+        description={t('选中的文字会变成链接；如果没有选中文字，将插入链接地址本身。')}
         width={440}
         footer={
           <>
             <button type="button" className="btn btn-ghost" onClick={() => setLinkOpen(false)}>
-              取消
+              {t('取消')}
             </button>
             <button type="button" className="btn btn-primary" onClick={confirmLink} disabled={!linkUrl.trim()}>
-              插入链接
+              {t('插入链接')}
             </button>
           </>
         }
       >
         <div className="field">
           <label className="field-label" htmlFor="doc-link-url">
-            链接地址
+            {t('链接地址')}
           </label>
           <input
             id="doc-link-url"
@@ -1417,16 +1435,19 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
       <Modal
         open={tableOpen}
         onClose={() => setTableOpen(false)}
-        title="插入表格"
-        description="第一行会作为表头。插入后可直接在单元格里输入。"
+        title={t('插入表格')}
+        description={t('第一行会作为表头。插入后可直接在单元格里输入。')}
         width={420}
         footer={
           <>
             <button type="button" className="btn btn-ghost" onClick={() => setTableOpen(false)}>
-              取消
+              {t('取消')}
             </button>
             <button type="button" className="btn btn-primary" onClick={confirmTable}>
-              插入 {clamp(Number(tableSize.rows) || 3, 1, 10)} × {clamp(Number(tableSize.cols) || 3, 1, 8)}
+              {t('插入 {rows} × {cols}', {
+                rows: clamp(Number(tableSize.rows) || 3, 1, 10),
+                cols: clamp(Number(tableSize.cols) || 3, 1, 8),
+              })}
             </button>
           </>
         }
@@ -1434,7 +1455,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
         <div className="doc-table-form">
           <div className="field">
             <label className="field-label" htmlFor="doc-table-rows">
-              行数
+              {t('行数')}
             </label>
             <input
               id="doc-table-rows"
@@ -1448,7 +1469,7 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
           </div>
           <div className="field">
             <label className="field-label" htmlFor="doc-table-cols">
-              列数
+              {t('列数')}
             </label>
             <input
               id="doc-table-cols"
@@ -1465,12 +1486,14 @@ export function DocEditor({ doc }: { doc: DocRecord }) {
 
       <ConfirmDialog
         open={deleteOpen}
-        title="删除这份文档？"
-        description={`《${title.trim() || '未命名文档'}》会从此设备移除，此操作无法撤销。建议先在「设置 · 数据」导出备份。`}
+        title={t('删除这份文档？')}
+        description={t('《{title}》会从此设备移除，此操作无法撤销。建议先在「设置 · 数据」导出备份。', {
+          title: title.trim() || t('未命名文档'),
+        })}
         onClose={() => setDeleteOpen(false)}
         onConfirm={() => {
           deleteFile('doc', doc.id)
-          toast('文档已删除', 'success')
+          toast(t('文档已删除'), 'success')
         }}
       />
     </>

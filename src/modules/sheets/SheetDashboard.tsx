@@ -29,6 +29,7 @@ import {
 } from '../../lib/chartData'
 import { cellKey, formatRange } from '../../lib/sheetRefs'
 import { cn } from '../../lib/utils'
+import { useT } from '../../i18n'
 import { useUI } from '../../store/ui'
 import { SheetChartView } from './SheetChartView'
 
@@ -94,6 +95,7 @@ interface SheetDashboardProps {
 }
 
 export function SheetDashboard({ tab, evaluator, charts, onBack, onNewChart, onEditChart, onDeleteChart }: SheetDashboardProps) {
+  const t = useT()
   const openAiTask = useUI((state) => state.openAiTask)
   const schema = useMemo(() => inspectSheet(tab), [tab])
   const [dimensionCol, setDimensionCol] = useState(() => defaultDimension(schema))
@@ -132,7 +134,7 @@ export function SheetDashboard({ tab, evaluator, charts, onBack, onNewChart, onE
         if (value > max) {
           max = value
           const columnName = schema.columns[col]?.name
-          maxLabel = `${formatRange({ row, col }, { row, col })}${columnName ? `（${columnName}）` : ''}`
+          maxLabel = `${formatRange({ row, col }, { row, col })}${columnName ? t('（{name}）', { name: columnName }) : ''}`
         }
       }
     }
@@ -156,7 +158,7 @@ export function SheetDashboard({ tab, evaluator, charts, onBack, onNewChart, onE
       numericCells: numbers,
       peakSeries,
     }
-  }, [evaluator, schema, tab])
+  }, [evaluator, schema, t, tab])
 
   const dimensionCandidates = schema.columns.filter((column) => !column.numeric || column.unique >= 2)
   const measureCandidates = schema.columns.filter((column) => column.numeric)
@@ -167,8 +169,8 @@ export function SheetDashboard({ tab, evaluator, charts, onBack, onNewChart, onE
   const groupMax = Math.max(1, ...groupRows.map((row) => Math.abs(row.value)))
   const groupTotal = groupRows.reduce((sum, row) => sum + row.value, 0)
   const topThreeShare = groupRows.slice(0, 3).reduce((sum, row) => sum + row.share, 0)
-  const dimensionName = schema.columns.find((column) => column.col === dimensionCol)?.name ?? '分类'
-  const measureName = schema.columns.find((column) => column.col === measureCol)?.name ?? '数值'
+  const dimensionName = schema.columns.find((column) => column.col === dimensionCol)?.name ?? t('分类')
+  const measureName = schema.columns.find((column) => column.col === measureCol)?.name ?? t('数值')
   const top = groupRows[0]
 
   return (
@@ -176,57 +178,63 @@ export function SheetDashboard({ tab, evaluator, charts, onBack, onNewChart, onE
       <div className="dash-scroll">
         <header className="dash-intro">
           <div className="dash-intro-text">
-            <span className="dash-eyebrow">BI 看板 · 本地实时汇总</span>
-            <h2>把表里的数字，变成能读的结论。</h2>
+            <span className="dash-eyebrow">{t('BI 看板 · 本地实时汇总')}</span>
+            <h2>{t('把表里的数字，变成能读的结论。')}</h2>
             <p>
-              基于「{tab.name}」的 {stats.records} 条记录 · {charts.length} 张图表 · 修改单元格后自动重算
+              {t('基于「{name}」的 {records} 条记录 · {count} 张图表 · 修改单元格后自动重算', {
+                name: tab.name,
+                records: stats.records,
+                count: charts.length,
+              })}
             </p>
           </div>
           <div className="dash-intro-actions">
             <button type="button" className="btn btn-secondary btn-sm" onClick={onBack}>
               <ArrowLeft size={13} />
-              返回表格
+              {t('返回表格')}
             </button>
             <button type="button" className="btn btn-primary btn-sm" onClick={() => onNewChart()}>
               <Plus size={14} />
-              新建图表
+              {t('新建图表')}
             </button>
           </div>
         </header>
 
-        <section className="dash-kpis" aria-label="关键指标">
+        <section className="dash-kpis" aria-label={t('关键指标')}>
           <article className="dash-kpi">
-            <span className="dash-kpi-label">记录数</span>
+            <span className="dash-kpi-label">{t('记录数')}</span>
             <strong>{stats.records.toLocaleString('zh-CN')}</strong>
-            <span className="dash-kpi-sub">{stats.numericCells} 个数值参与计算</span>
+            <span className="dash-kpi-sub">{t('{n} 个数值参与计算', { n: stats.numericCells })}</span>
             <Sparkline values={stats.peakSeries} />
           </article>
           <article className="dash-kpi is-accent">
-            <span className="dash-kpi-label">数值合计</span>
+            <span className="dash-kpi-label">{t('数值合计')}</span>
             <strong>{formatCompact(stats.sum)}</strong>
-            <span className="dash-kpi-sub">跨 {stats.numericColumns} 个指标列</span>
+            <span className="dash-kpi-sub">{t('跨 {n} 个指标列', { n: stats.numericColumns })}</span>
           </article>
           <article className="dash-kpi">
-            <span className="dash-kpi-label">平均值</span>
+            <span className="dash-kpi-label">{t('平均值')}</span>
             <strong>{formatCompact(stats.average)}</strong>
-            <span className="dash-kpi-sub">最高 {formatCompact(stats.max)}</span>
+            <span className="dash-kpi-sub">{t('最高 {value}', { value: formatCompact(stats.max) })}</span>
           </article>
           <article className="dash-kpi">
-            <span className="dash-kpi-label">数据完整度</span>
+            <span className="dash-kpi-label">{t('数据完整度')}</span>
             <strong>{(stats.density * 100).toFixed(0)}%</strong>
-            <span className="dash-kpi-sub">{stats.maxLabel ? `峰值出现在 ${stats.maxLabel}` : '所有指标已就绪'}</span>
+            <span className="dash-kpi-sub">
+              {stats.maxLabel ? t('峰值出现在 {label}', { label: stats.maxLabel }) : t('所有指标已就绪')}
+            </span>
           </article>
         </section>
 
-        <section className="dash-chart-section" aria-label="图表">
+        <section className="dash-chart-section" aria-label={t('图表')}>
           <div className="dash-section-head">
             <div>
-              <h3>图表</h3>
-              <p>从任意选区插入，图表会跟着数据一起变。</p>
+              <h3>{t('图表')}</h3>
+              <p>{t('从任意选区插入，图表会跟着数据一起变。')}</p>
             </div>
             <button type="button" className="dash-link-btn" onClick={() => onNewChart()}>
               <Plus size={13} />
-              添加
+              {t('添加')}
             </button>
           </div>
 
@@ -240,11 +248,11 @@ export function SheetDashboard({ tab, evaluator, charts, onBack, onNewChart, onE
                       <div className="dash-chart-title">
                         <h4>{chart.title}</h4>
                         <span>
-                          {CHART_KIND_LABELS[chart.kind]} ·{' '}
+                          {t(CHART_KIND_LABELS[chart.kind])} ·{' '}
                           {formatRange({ row: chart.r1, col: chart.c1 }, { row: chart.r2, col: chart.c2 })}
                         </span>
                       </div>
-                      <Dropdown className="icon-btn dash-chart-menu" title="图表操作" trigger={<MoreHorizontal size={16} />}>
+                      <Dropdown className="icon-btn dash-chart-menu" title={t('图表操作')} trigger={<MoreHorizontal size={16} />}>
                         {(close) => (
                           <>
                             <button
@@ -256,7 +264,7 @@ export function SheetDashboard({ tab, evaluator, charts, onBack, onNewChart, onE
                               }}
                             >
                               <Pencil size={14} />
-                              编辑图表
+                              {t('编辑图表')}
                             </button>
                             <div className="menu-sep" />
                             <button
@@ -268,7 +276,7 @@ export function SheetDashboard({ tab, evaluator, charts, onBack, onNewChart, onE
                               }}
                             >
                               <Trash2 size={14} />
-                              删除图表
+                              {t('删除图表')}
                             </button>
                           </>
                         )}
@@ -284,15 +292,15 @@ export function SheetDashboard({ tab, evaluator, charts, onBack, onNewChart, onE
                 <span className="dash-chart-add-icon">
                   <Plus size={18} />
                 </span>
-                <strong>再放一张图表</strong>
-                <em>从当前选区自动识别数据</em>
+                <strong>{t('再放一张图表')}</strong>
+                <em>{t('从当前选区自动识别数据')}</em>
               </button>
             </div>
           ) : (
             <div className="dash-chart-empty">
               <div className="dash-chart-empty-copy">
-                <h4>还没有图表。</h4>
-                <p>框选一段带标题和数字的区域，若道会自动识别分类与系列。也可以从下面的模板开始。</p>
+                <h4>{t('还没有图表。')}</h4>
+                <p>{t('框选一段带标题和数字的区域，若道会自动识别分类与系列。也可以从下面的模板开始。')}</p>
               </div>
               <div className="dash-template-row">
                 {TEMPLATES.map((item) => {
@@ -301,8 +309,8 @@ export function SheetDashboard({ tab, evaluator, charts, onBack, onNewChart, onE
                     <button key={item.kind} type="button" className="dash-template" onClick={() => onNewChart(item.kind)}>
                       <Icon size={17} />
                       <span>
-                        <strong>{item.label}</strong>
-                        <em>{item.hint}</em>
+                        <strong>{t(item.label)}</strong>
+                        <em>{t(item.hint)}</em>
                       </span>
                     </button>
                   )
@@ -313,16 +321,16 @@ export function SheetDashboard({ tab, evaluator, charts, onBack, onNewChart, onE
         </section>
 
         <div className="dash-lower">
-          <section className="dash-panel dash-pivot" aria-label="分组分析">
+          <section className="dash-panel dash-pivot" aria-label={t('分组分析')}>
             <div className="dash-panel-head">
               <div>
-                <h3>分组洞察</h3>
-                <p>按一个维度拆开看，找到贡献最大的那一组。</p>
+                <h3>{t('分组洞察')}</h3>
+                <p>{t('按一个维度拆开看，找到贡献最大的那一组。')}</p>
               </div>
             </div>
             <div className="dash-pivot-controls">
               <label>
-                <span>分组</span>
+                <span>{t('分组')}</span>
                 <select value={dimensionCol} onChange={(event) => setDimensionCol(Number(event.target.value))}>
                   {dimensionCandidates.map((column) => (
                     <option key={column.col} value={column.col}>
@@ -332,7 +340,7 @@ export function SheetDashboard({ tab, evaluator, charts, onBack, onNewChart, onE
                 </select>
               </label>
               <label>
-                <span>数值</span>
+                <span>{t('数值')}</span>
                 <select value={measureCol} onChange={(event) => setMeasureCol(Number(event.target.value))}>
                   {measureCandidates.length > 0 ? (
                     measureCandidates.map((column) => (
@@ -341,16 +349,16 @@ export function SheetDashboard({ tab, evaluator, charts, onBack, onNewChart, onE
                       </option>
                     ))
                   ) : (
-                    <option value={measureCol}>无可用数值列</option>
+                    <option value={measureCol}>{t('无可用数值列')}</option>
                   )}
                 </select>
               </label>
               <label>
-                <span>口径</span>
+                <span>{t('口径')}</span>
                 <select value={op} onChange={(event) => setOp(event.target.value as AggregateOp)}>
                   {OPS.map((item) => (
                     <option key={item.value} value={item.value}>
-                      {item.label}
+                      {t(item.label)}
                     </option>
                   ))}
                 </select>
@@ -376,21 +384,23 @@ export function SheetDashboard({ tab, evaluator, charts, onBack, onNewChart, onE
                 </div>
                 <footer className="dash-pivot-foot">
                   <span>
-                    共 {groupRows.length >= 7 ? '7+' : groupRows.length} 组 · 按{dimensionName}拆分
+                    {t('共 {n} 组 · 按{name}拆分', { n: groupRows.length >= 7 ? '7+' : groupRows.length, name: dimensionName })}
                   </span>
-                  <span>口径：{OPS.find((item) => item.value === op)?.label} {measureName}</span>
+                  <span>
+                    {t('口径：{op} {measure}', { op: t(OPS.find((item) => item.value === op)?.label ?? ''), measure: measureName })}
+                  </span>
                 </footer>
               </div>
             ) : (
-              <div className="dash-panel-empty">这段数据里还没有可分组文字列和数值列。</div>
+              <div className="dash-panel-empty">{t('这段数据里还没有可分组文字列和数值列。')}</div>
             )}
           </section>
 
-          <aside className="dash-panel dash-story" aria-label="自动摘要">
+          <aside className="dash-panel dash-story" aria-label={t('自动摘要')}>
             <div className="dash-panel-head">
               <div>
-                <h3>自动摘要</h3>
-                <p>从当前分组直接读出的三句话。</p>
+                <h3>{t('自动摘要')}</h3>
+                <p>{t('从当前分组直接读出的三句话。')}</p>
               </div>
               <Sparkles size={15} className="dash-story-spark" />
             </div>
@@ -398,17 +408,25 @@ export function SheetDashboard({ tab, evaluator, charts, onBack, onNewChart, onE
               {top ? (
                 <>
                   <li>
-                    <strong>{top.label}</strong> 在「{dimensionName}」中排第一，占 {groupTotal > 0 ? (top.share * 100).toFixed(0) : 0}%。
+                    {t('{label} 在「{dim}」中排第一，占 {pct}%。', {
+                      label: top.label,
+                      dim: dimensionName,
+                      pct: groupTotal > 0 ? (top.share * 100).toFixed(0) : 0,
+                    })}
                   </li>
                   <li>
-                    前 3 组合计占 {(topThreeShare * 100).toFixed(0)}%，{topThreeShare >= 0.65 ? '集中度较高，值得优先关注头部。' : '分布相对均衡，没有明显单点依赖。'}
+                    {t('前 3 组合计占 {pct}%，', { pct: (topThreeShare * 100).toFixed(0) })}
+                    {topThreeShare >= 0.65 ? t('集中度较高，值得优先关注头部。') : t('分布相对均衡，没有明显单点依赖。')}
                   </li>
                   <li>
-                    当前口径下，平均值约为 {groupTotal > 0 && groupRows.length > 0 ? formatCompact(groupTotal / groupRows.length) : '—'}，合计 {formatCompact(groupTotal)}。
+                    {t('当前口径下，平均值约为 {avg}，合计 {total}。', {
+                      avg: groupTotal > 0 && groupRows.length > 0 ? formatCompact(groupTotal / groupRows.length) : '—',
+                      total: formatCompact(groupTotal),
+                    })}
                   </li>
                 </>
               ) : (
-                <li>选择分组与数值列后，这里会自动生成经营摘要。</li>
+                <li>{t('选择分组与数值列后，这里会自动生成经营摘要。')}</li>
               )}
             </ol>
             <button
@@ -416,12 +434,15 @@ export function SheetDashboard({ tab, evaluator, charts, onBack, onNewChart, onE
               className="dash-ai-btn"
               onClick={() =>
                 openAiTask(
-                  `请基于工作表「${tab.name}」做一份简短经营分析：围绕${dimensionName}与${measureName}，指出最重要的分组、集中度和异常信号，并给出三条可执行建议。`,
+                  t(
+                    '请基于工作表「{name}」做一份简短经营分析：围绕{dim}与{measure}，指出最重要的分组、集中度和异常信号，并给出三条可执行建议。',
+                    { name: tab.name, dim: dimensionName, measure: measureName },
+                  ),
                 )
               }
             >
               <Sparkles size={13} />
-              让 AI 继续解读
+              {t('让 AI 继续解读')}
             </button>
           </aside>
         </div>

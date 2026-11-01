@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Paintbrush, Plus, Sparkles, Trash2 } from 'lucide-react'
 import type { ConditionalKind, ConditionalRule, ConditionalTone, SheetTab } from '../../types'
 import { Modal } from '../../components/ui'
+import { useT } from '../../i18n'
 import { formatRange } from '../../lib/sheetRefs'
 import { cn, uid } from '../../lib/utils'
 
@@ -43,10 +44,10 @@ function ruleText(rule: ConditionalRule): string {
   if (rule.kind === 'dataBar') return '数据条'
   if (rule.kind === 'colorScale') return '色阶'
   if (rule.kind === 'duplicate') return '重复值'
-  if (rule.kind === 'greater') return `大于 ${rule.value ?? 0}`
-  if (rule.kind === 'less') return `小于 ${rule.value ?? 0}`
-  if (rule.kind === 'equal') return `等于 ${rule.value ?? 0}`
-  return `介于 ${rule.value ?? 0} 与 ${rule.value2 ?? 0}`
+  if (rule.kind === 'greater') return `大于 {value}`
+  if (rule.kind === 'less') return `小于 {value}`
+  if (rule.kind === 'equal') return `等于 {value}`
+  return `介于 {value} 与 {value2}`
 }
 
 function needsValue(kind: ConditionalKind): boolean {
@@ -54,6 +55,7 @@ function needsValue(kind: ConditionalKind): boolean {
 }
 
 export function ConditionalDialog({ open, tab, scope, initialKind, onClose, onAdd, onRemove }: ConditionalDialogProps) {
+  const t = useT()
   const [kind, setKind] = useState<ConditionalKind>(initialKind)
   const [value, setValue] = useState('')
   const [value2, setValue2] = useState('')
@@ -97,18 +99,18 @@ export function ConditionalDialog({ open, tab, scope, initialKind, onClose, onAd
     <Modal
       open={open}
       onClose={onClose}
-      title="条件格式"
-      description={`规则会实时套用到 ${address}，并随数值变化重新计算。`}
+      title={t('条件格式')}
+      description={t('规则会实时套用到 {address}，并随数值变化重新计算。', { address })}
       width={600}
       className="conditional-dialog"
       footer={
         <>
           <button type="button" className="btn btn-ghost" onClick={onClose}>
-            取消
+            {t('取消')}
           </button>
           <button type="button" className="btn btn-primary" onClick={add} disabled={!valid}>
             <Plus size={14} />
-            添加规则
+            {t('添加规则')}
           </button>
         </>
       }
@@ -123,8 +125,8 @@ export function ConditionalDialog({ open, tab, scope, initialKind, onClose, onAd
                 className={cn('conditional-kind', kind === item.value && 'active')}
                 onClick={() => setKind(item.value)}
               >
-                <strong>{item.label}</strong>
-                <span>{item.hint}</span>
+                <strong>{t(item.label)}</strong>
+                <span>{t(item.hint)}</span>
               </button>
             ))}
           </div>
@@ -132,24 +134,24 @@ export function ConditionalDialog({ open, tab, scope, initialKind, onClose, onAd
           {needsValue(kind) && (
             <div className="conditional-values">
               <label>
-                <span>{kind === 'between' ? '下限' : '数值'}</span>
+                <span>{kind === 'between' ? t('下限') : t('数值')}</span>
                 <input
                   className="input"
                   inputMode="decimal"
                   value={value}
                   onChange={(event) => setValue(event.target.value)}
-                  placeholder="例如 100"
+                  placeholder={t('例如 {value}', { value: 100 })}
                 />
               </label>
               {kind === 'between' && (
                 <label>
-                  <span>上限</span>
+                  <span>{t('上限')}</span>
                   <input
                     className="input"
                     inputMode="decimal"
                     value={value2}
                     onChange={(event) => setValue2(event.target.value)}
-                    placeholder="例如 500"
+                    placeholder={t('例如 {value}', { value: 500 })}
                   />
                 </label>
               )}
@@ -157,7 +159,7 @@ export function ConditionalDialog({ open, tab, scope, initialKind, onClose, onAd
           )}
 
           <div className="conditional-tones">
-            <span className="conditional-tone-label">标记颜色</span>
+            <span className="conditional-tone-label">{t('标记颜色')}</span>
             <div className="conditional-tone-row">
               {TONES.map((item) => (
                 <button
@@ -165,11 +167,11 @@ export function ConditionalDialog({ open, tab, scope, initialKind, onClose, onAd
                   type="button"
                   className={cn('conditional-tone', tone === item.value && 'active')}
                   onClick={() => setTone(item.value)}
-                  title={item.label}
-                  aria-label={item.label}
+                  title={t(item.label)}
+                  aria-label={t(item.label)}
                 >
                   <i style={{ background: item.color }} />
-                  <span style={{ background: item.soft }}>{item.label}</span>
+                  <span style={{ background: item.soft }}>{t(item.label)}</span>
                 </button>
               ))}
             </div>
@@ -178,17 +180,23 @@ export function ConditionalDialog({ open, tab, scope, initialKind, onClose, onAd
           <div className="conditional-preview">
             <Paintbrush size={15} />
             <p>
-              {kind === 'dataBar' && '在单元格内绘制比例条，数字越大条越长。'}
-              {kind === 'colorScale' && '按数值大小在底色上渐变，适合快速扫读。'}
-              {kind === 'duplicate' && '相同内容第二次及以后出现时会被标记。'}
-              {needsValue(kind) && `符合「${ruleText({ id: '', kind, r1: 0, r2: 0, c1: 0, c2: 0, value: numeric, value2: numeric2 })}」的单元格会使用所选底色与字色。`}
+              {kind === 'dataBar' && t('在单元格内绘制比例条，数字越大条越长。')}
+              {kind === 'colorScale' && t('按数值大小在底色上渐变，适合快速扫读。')}
+              {kind === 'duplicate' && t('相同内容第二次及以后出现时会被标记。')}
+              {needsValue(kind) &&
+                t('符合「{rule}」的单元格会使用所选底色与字色。', {
+                  rule: t(ruleText({ id: '', kind, r1: 0, r2: 0, c1: 0, c2: 0, value: numeric, value2: numeric2 }), {
+                    value: numeric,
+                    value2: numeric2,
+                  }),
+                })}
             </p>
           </div>
         </div>
 
         <aside className="conditional-existing">
           <div className="conditional-existing-head">
-            <h3>已有规则</h3>
+            <h3>{t('已有规则')}</h3>
             <span>{rules.length}</span>
           </div>
           {rules.length > 0 ? (
@@ -197,10 +205,10 @@ export function ConditionalDialog({ open, tab, scope, initialKind, onClose, onAd
                 <div key={rule.id} className="conditional-rule">
                   <span className={cn('conditional-rule-dot', `tone-${rule.tone ?? 'accent'}`)} />
                   <div>
-                    <strong>{ruleText(rule)}</strong>
+                    <strong>{t(ruleText(rule), { value: rule.value ?? 0, value2: rule.value2 ?? 0 })}</strong>
                     <em>{formatRange({ row: rule.r1, col: rule.c1 }, { row: rule.r2, col: rule.c2 })}</em>
                   </div>
-                  <button type="button" className="icon-btn" title="删除规则" onClick={() => onRemove(rule.id)}>
+                  <button type="button" className="icon-btn" title={t('删除规则')} onClick={() => onRemove(rule.id)}>
                     <Trash2 size={13} />
                   </button>
                 </div>
@@ -209,10 +217,10 @@ export function ConditionalDialog({ open, tab, scope, initialKind, onClose, onAd
           ) : (
             <div className="conditional-empty">
               <Sparkles size={16} />
-              <p>还没有规则。选好类型后添加第一条。</p>
+              <p>{t('还没有规则。选好类型后添加第一条。')}</p>
             </div>
           )}
-          <p className="conditional-note">规则只在若道内生效；导出 Excel 时会保留底色，但不会写入可编辑的条件格式。</p>
+          <p className="conditional-note">{t('规则只在若道内生效；导出 Excel 时会保留底色，但不会写入可编辑的条件格式。')}</p>
         </aside>
       </div>
     </Modal>

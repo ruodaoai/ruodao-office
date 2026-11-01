@@ -1,4 +1,5 @@
 import { del, get, set } from 'idb-keyval'
+import { t } from '../i18n'
 
 export interface RuodaoUser {
   id: string
@@ -67,15 +68,16 @@ export function defaultRuodaoBaseUrl(): string {
 
 export function normalizeBaseUrl(input: string): string {
   let value = input.trim().replace(/\/+$/, '')
-  if (!value) throw new Error('请填写若道服务地址')
+  if (!value) throw new Error(t('请填写若道服务地址'))
   if (!/^https?:\/\//i.test(value)) value = `https://${value}`
   let url: URL
   try {
     url = new URL(value)
   } catch {
-    throw new Error('服务地址格式不正确')
+    throw new Error(t('服务地址格式不正确'))
   }
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error('服务地址必须是 http 或 https')
+  if (url.protocol !== 'http:' && url.protocol !== 'https:')
+    throw new Error(t('服务地址必须是 http 或 https'))
   return value
 }
 
@@ -166,10 +168,10 @@ async function readBody(response: Response): Promise<unknown> {
 }
 
 export function authErrorMessage(status: number, body: unknown): string {
-  if (status === 401 || status === 403) return '邮箱或密码不正确，或账户已被限制登录'
-  if (status === 429) return '尝试过于频繁，请稍后再试'
-  if (status >= 500) return '若道服务暂不可用，请稍后再试'
-  return messageOf(body, `登录失败（${status}）`)
+  if (status === 401 || status === 403) return t('邮箱或密码不正确，或账户已被限制登录')
+  if (status === 429) return t('尝试过于频繁，请稍后再试')
+  if (status >= 500) return t('若道服务暂不可用，请稍后再试')
+  return messageOf(body, t('登录失败（{status}）', { status }))
 }
 
 export async function loginToRuodao(input: {
@@ -186,15 +188,15 @@ export async function loginToRuodao(input: {
       body: JSON.stringify({ email: input.email.trim().toLowerCase(), password: input.password }),
     })
   } catch {
-    throw new RuodaoNetworkError('无法连接若道服务，请检查服务地址与网络')
+    throw new RuodaoNetworkError(t('无法连接若道服务，请检查服务地址与网络'))
   }
   const body = await readBody(response)
   if (!response.ok) throw new RuodaoRequestError(authErrorMessage(response.status, body), response.status)
   const payload = body as { success?: boolean; data?: { token?: string; user?: RuodaoUser }; message?: string } | null
-  if (payload?.success === false) throw new Error(payload.message || '登录失败')
+  if (payload?.success === false) throw new Error(payload.message || t('登录失败'))
   const token = payload?.data?.token?.trim()
   const user = payload?.data?.user
-  if (!token || !user) throw new Error('若道登录响应缺少账户信息')
+  if (!token || !user) throw new Error(t('若道登录响应缺少账户信息'))
   rememberBaseUrl(baseUrl)
   return { baseUrl, token, user, signedInAt: Date.now() }
 }
@@ -207,20 +209,22 @@ export async function refreshRuodaoSession(session: RuodaoSession): Promise<Ruod
       headers: { Authorization: `Bearer ${session.token}` },
     })
   } catch {
-    throw new RuodaoNetworkError('无法连接若道服务，请检查网络')
+    throw new RuodaoNetworkError(t('无法连接若道服务，请检查网络'))
   }
   const body = await readBody(response)
   if (!response.ok) {
     throw new RuodaoRequestError(
-      response.status === 401 || response.status === 403 ? '登录已过期，请重新登录' : authErrorMessage(response.status, body),
+      response.status === 401 || response.status === 403
+        ? t('登录已过期，请重新登录')
+        : authErrorMessage(response.status, body),
       response.status,
     )
   }
   const payload = body as { success?: boolean; data?: { token?: string; user?: RuodaoUser }; message?: string } | null
-  if (payload?.success === false) throw new Error(payload.message || '续期失败')
+  if (payload?.success === false) throw new Error(payload.message || t('续期失败'))
   const token = payload?.data?.token?.trim()
   const user = payload?.data?.user ?? session.user
-  if (!token) throw new Error('续期响应缺少令牌')
+  if (!token) throw new Error(t('续期响应缺少令牌'))
   return { ...session, token, user, signedInAt: Date.now() }
 }
 
@@ -266,18 +270,18 @@ export async function fetchRuodaoModels(session: RuodaoSession): Promise<RuodaoM
   } catch {
     /* fall back to the OpenAI-compatible model list */
   }
-  if (catalogUnauthorized) throw new RuodaoRequestError('登录已过期，请重新登录', 401)
+  if (catalogUnauthorized) throw new RuodaoRequestError(t('登录已过期，请重新登录'), 401)
   let response: Response
   try {
     response = await fetch(`${session.baseUrl}/api/v1/models`, { headers })
   } catch {
-    throw new RuodaoNetworkError('无法连接若道服务，请检查网络')
+    throw new RuodaoNetworkError(t('无法连接若道服务，请检查网络'))
   }
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) {
-      throw new RuodaoRequestError('登录已过期，请重新登录', response.status)
+      throw new RuodaoRequestError(t('登录已过期，请重新登录'), response.status)
     }
-    throw new RuodaoRequestError(`读取云端模型失败（${response.status}）`, response.status)
+    throw new RuodaoRequestError(t('读取云端模型失败（{status}）', { status: response.status }), response.status)
   }
   const body = (await response.json()) as { data?: Array<{ id?: string; owned_by?: string }> }
   return (body?.data ?? [])

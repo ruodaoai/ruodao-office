@@ -22,6 +22,7 @@ import {
 import { cn, shortcut } from '../lib/utils'
 import { useLibrary } from '../store/library'
 import { useUI } from '../store/ui'
+import { useT } from '../i18n'
 
 interface PaletteItem {
   id: string
@@ -33,6 +34,7 @@ interface PaletteItem {
 }
 
 export function CommandPalette() {
+  const t = useT()
   const open = useUI((s) => s.paletteOpen)
   const setOpen = useUI((s) => s.setPaletteOpen)
   const setModule = useUI((s) => s.setModule)
@@ -264,8 +266,8 @@ export function CommandPalette() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return items
-    return items.filter((item) => `${item.label} ${item.hint ?? ''} ${item.group}`.toLowerCase().includes(q))
-  }, [items, query])
+    return items.filter((item) => `${t(item.label)} ${item.hint ? t(item.hint) : ''} ${t(item.group)}`.toLowerCase().includes(q))
+  }, [items, query, t])
 
   useEffect(() => {
     setActiveIndex(0)
@@ -297,13 +299,13 @@ export function CommandPalette() {
         if (event.target === event.currentTarget) setOpen(false)
       }}
     >
-      <div className="palette" role="dialog" aria-modal="true" aria-label="命令面板">
+      <div className="palette" role="dialog" aria-modal="true" aria-label={t('命令面板')}>
         <div className="palette-input-row">
           <Search size={17} />
           <input
             ref={inputRef}
             className="palette-input"
-            placeholder="搜索文件、命令或操作…"
+            placeholder={t('搜索文件、命令或操作…')}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={(event) => {
@@ -325,10 +327,10 @@ export function CommandPalette() {
           <span className="kbd">ESC</span>
         </div>
         <div className="palette-list" ref={listRef}>
-          {filtered.length === 0 && <div className="palette-empty">没有匹配的文件或命令</div>}
+          {filtered.length === 0 && <div className="palette-empty">{t('没有匹配的文件或命令')}</div>}
           {groups.map((group) => (
             <div key={group.name}>
-              <div className="palette-group">{group.name}</div>
+              <div className="palette-group">{t(group.name)}</div>
               {group.items.map(({ item, index }) => {
                 const Icon = item.icon
                 return (
@@ -343,8 +345,8 @@ export function CommandPalette() {
                     <span className="palette-icon">
                       <Icon size={14} />
                     </span>
-                    <span className="palette-item-name">{item.label}</span>
-                    {item.hint && <span className="palette-item-hint">{item.hint}</span>}
+                    <span className="palette-item-name">{t(item.label)}</span>
+                    {item.hint && <span className="palette-item-hint">{t(item.hint)}</span>}
                   </button>
                 )
               })}
@@ -355,13 +357,13 @@ export function CommandPalette() {
           <span>
             <ArrowUp size={10} />
             <ArrowDown size={10} />
-            浏览
+            {t('浏览')}
           </span>
           <span>
             <CornerDownLeft size={10} />
-            打开
+            {t('打开')}
           </span>
-          <span style={{ marginLeft: 'auto' }}>{shortcut} K 随时唤起</span>
+          <span style={{ marginLeft: 'auto' }}>{t('{key} K 随时唤起', { key: shortcut })}</span>
         </div>
       </div>
     </div>,

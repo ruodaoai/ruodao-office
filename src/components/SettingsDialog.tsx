@@ -8,6 +8,7 @@ import {
   EyeOff,
   HardDrive,
   Info,
+  Languages,
   LogIn,
   RefreshCw,
   ShieldCheck,
@@ -25,15 +26,22 @@ import { cn, downloadText, formatDateTime, readFileAsText } from '../lib/utils'
 import { useAuth, displayNameOf } from '../store/auth'
 import { useLibrary } from '../store/library'
 import { useUI, type SettingsTab } from '../store/ui'
+import { LOCALES, useLocale, useT } from '../i18n'
 import { ConfirmDialog, Logo, Modal } from './ui'
 
 const TABS: Array<{ id: SettingsTab; label: string }> = [
+  { id: 'general', label: '通用' },
   { id: 'ai', label: 'AI 助手' },
   { id: 'data', label: '数据与隐私' },
   { id: 'about', label: '关于与开源' },
 ]
 
 export function SettingsDialog() {
+  const t = useT()
+  const locale = useLocale((s) => s.locale)
+  const setLocale = useLocale((s) => s.setLocale)
+  const followSystem = useLocale((s) => s.followSystem)
+  const setFollowSystem = useLocale((s) => s.setFollowSystem)
   const open = useUI((s) => s.settingsOpen)
   const tab = useUI((s) => s.settingsTab)
   const setTab = useUI((s) => s.setSettingsTab)
@@ -113,23 +121,23 @@ export function SettingsDialog() {
   const saveAi = () => {
     if (draft.provider === 'ruodao') {
       if (!session) {
-        toast('请先登录若道账户', 'error')
+        toast(t('请先登录若道账户'), 'error')
         return
       }
       if (!draft.model.trim()) {
-        toast('请选择一个云端模型', 'error')
+        toast(t('请选择一个云端模型'), 'error')
         return
       }
       updateAi({ ...draft, baseUrl: '', apiKey: '' })
-      toast('已切换到若道云端模型', 'success')
+      toast(t('已切换到若道云端模型'), 'success')
       return
     }
     if (!draft.baseUrl.trim() || !draft.model.trim()) {
-      toast('请填写 API 地址与模型名称', 'error')
+      toast(t('请填写 API 地址与模型名称'), 'error')
       return
     }
     updateAi(draft)
-    toast('AI 配置已保存', 'success')
+    toast(t('AI 配置已保存'), 'success')
   }
 
   const runTest = async () => {
@@ -137,7 +145,7 @@ export function SettingsDialog() {
     setTestResult(null)
     try {
       await testConnection(draft)
-      setTestResult({ ok: true, message: '连接成功，可以开始对话' })
+      setTestResult({ ok: true, message: t('连接成功，可以开始对话') })
     } catch (error) {
       setTestResult({ ok: false, message: (error as Error).message })
     } finally {
@@ -147,8 +155,8 @@ export function SettingsDialog() {
 
   const doExport = async () => {
     const backup = await exportBackup(useLibrary.getState().snapshot())
-    downloadText(JSON.stringify(backup, null, 2), `若道办公-备份-${new Date().toISOString().slice(0, 10)}.json`, 'application/json')
-    toast('备份已导出到下载目录', 'success')
+    downloadText(JSON.stringify(backup, null, 2), t('若道办公-备份-{date}.json', { date: new Date().toISOString().slice(0, 10) }), 'application/json')
+    toast(t('备份已导出到下载目录'), 'success')
   }
 
   const handleImport = async (file: File | undefined) => {
@@ -157,7 +165,7 @@ export function SettingsDialog() {
       const text = await readFileAsText(file)
       const raw = JSON.parse(text)
       if (raw?.app !== 'ruodao-office' || !Array.isArray(raw.docs) || !Array.isArray(raw.sheets) || !Array.isArray(raw.notes)) {
-        throw new Error('不是有效的若道办公备份')
+        throw new Error(t('不是有效的若道办公备份'))
       }
       const snapshot: LibrarySnapshot = {
         docs: raw.docs,
@@ -169,7 +177,7 @@ export function SettingsDialog() {
       }
       setPendingImport(snapshot)
     } catch (error) {
-      toast((error as Error).message || '备份文件解析失败', 'error')
+      toast((error as Error).message || t('备份文件解析失败'), 'error')
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
@@ -178,7 +186,7 @@ export function SettingsDialog() {
   const doClear = async () => {
     await clearLibrary()
     clearAll()
-    toast('本地数据已清空')
+    toast(t('本地数据已清空'))
   }
 
   return (
@@ -186,8 +194,8 @@ export function SettingsDialog() {
       <Modal
         open={open}
         onClose={close}
-        title="设置"
-        description="所有配置与数据只保存在当前设备。"
+        title={t('设置')}
+        description={t('所有配置与数据只保存在当前设备。')}
         width={760}
         className="settings-modal"
       >
@@ -201,20 +209,52 @@ export function SettingsDialog() {
               className={cn('settings-tab', tab === item.id && 'active')}
               onClick={() => setTab(item.id)}
             >
-              {item.label}
+              {t(item.label)}
             </button>
           ))}
         </div>
+
+        {tab === 'general' && (
+          <div className="settings-panel">
+            <section className="settings-section">
+              <div className="settings-section-title">
+                <Languages size={14} />
+                {t('界面语言')}
+              </div>
+              <p className="hint" style={{ margin: 0 }}>
+                {t('切换语言后立即生效，已保存的内容不受影响。')}
+              </p>
+              <div className="lang-options">
+                {LOCALES.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={cn('lang-option', locale === item.id && 'active')}
+                    onClick={() => setLocale(item.id)}
+                  >
+                    <span className="lang-name">{item.id === 'zh-CN' ? '简体中文' : 'English'}</span>
+                    <span className="lang-native">{item.id === 'zh-CN' ? 'Chinese (Simplified)' : 'English'}</span>
+                    {locale === item.id && <Check size={15} />}
+                  </button>
+                ))}
+              </div>
+              <label className="settings-check">
+                <input type="checkbox" checked={followSystem} onChange={(e) => setFollowSystem(e.target.checked)} />
+                <span>{t('跟随系统语言')}</span>
+              </label>
+            </section>
+          </div>
+        )}
 
         {tab === 'ai' && (
           <div className="settings-panel">
             <section className="settings-section">
               <div className="settings-section-title">
                 <Sparkles size={14} />
-                模型服务
+                {t('模型服务')}
               </div>
               <p className="hint" style={{ margin: 0 }}>
-                选择预设，或填写任意 OpenAI 兼容端点。也可以把 Ollama 跑在本机，完全离线。
+                {t('选择预设，或填写任意 OpenAI 兼容端点。也可以把 Ollama 跑在本机，完全离线。')}
               </p>
               <div className="provider-row">
                 {AI_PRESETS.map((preset) => (
@@ -223,9 +263,9 @@ export function SettingsDialog() {
                     type="button"
                     className={cn('provider-chip', draft.provider === preset.id && 'active')}
                     onClick={() => selectProvider(preset.id)}
-                    title={preset.hint}
+                    title={t(preset.hint)}
                   >
-                    {preset.name}
+                    {t(preset.name)}
                   </button>
                 ))}
               </div>
@@ -243,8 +283,8 @@ export function SettingsDialog() {
                         </>
                       ) : (
                         <>
-                          <strong>尚未登录若道</strong>
-                          <span>登录后自动读取账户可用的云端模型，无需填写 API Key。</span>
+                          <strong>{t('尚未登录若道')}</strong>
+                          <span>{t('登录后自动读取账户可用的云端模型，无需填写 API Key。')}</span>
                         </>
                       )}
                     </div>
@@ -253,13 +293,13 @@ export function SettingsDialog() {
                       className="btn btn-secondary btn-sm"
                       onClick={() => setAccountOpen(true)}
                     >
-                      {session ? '账户' : <><LogIn size={13} />登录</>}
+                      {session ? t('账户') : <><LogIn size={13} />{t('登录')}</>}
                     </button>
                   </div>
                   <div className="settings-grid">
                     <div className="field">
                       <label className="field-label" htmlFor="ai-cloud-model">
-                        云端模型
+                        {t('云端模型')}
                       </label>
                       <div className="input-affix">
                         <select
@@ -269,14 +309,14 @@ export function SettingsDialog() {
                           disabled={!session || cloudModelsLoading}
                           onChange={(event) => setDraft({ ...draft, model: event.target.value })}
                         >
-                          {!draft.model && <option value="">{session ? '请选择模型' : '登录后选择'}</option>}
+                          {!draft.model && <option value="">{session ? t('请选择模型') : t('登录后选择')}</option>}
                           {draft.model && !cloudModels.some((model) => model.modelName === draft.model) && (
-                            <option value={draft.model}>{draft.model}（当前不可用）</option>
+                            <option value={draft.model}>{t('{model}（当前不可用）', { model: draft.model })}</option>
                           )}
                           {cloudModels.map((model) => (
                             <option key={model.id} value={model.modelName}>
                               {model.label && model.label !== model.modelName
-                                ? `${model.label}（${model.modelName}）`
+                                ? t('{label}（{name}）', { label: model.label, name: model.modelName })
                                 : model.modelName}
                             </option>
                           ))}
@@ -286,21 +326,21 @@ export function SettingsDialog() {
                           className="icon-btn icon-btn-sm affix-btn"
                           onClick={() => void loadCloudModels().catch(() => undefined)}
                           disabled={!session || cloudModelsLoading}
-                          aria-label="刷新云端模型"
-                          title="刷新云端模型"
+                          aria-label={t('刷新云端模型')}
+                          title={t('刷新云端模型')}
                         >
                           <RefreshCw size={14} className={cn(cloudModelsLoading && 'spin')} />
                         </button>
                       </div>
                       <span className={cn('hint', cloudModelsError && 'hint-danger')}>
-                        {cloudModelsError || '模型的可用性与计费由若道账户控制。'}
+                        {cloudModelsError || t('模型的可用性与计费由若道账户控制。')}
                       </span>
                     </div>
                     <div className="field">
-                      <span className="field-label">鉴权与计费</span>
+                      <span className="field-label">{t('鉴权与计费')}</span>
                       <div className="cloud-billing">
                         <Cloud size={13} />
-                        登录令牌鉴权 · 按若道账户额度计费
+                        {t('登录令牌鉴权 · 按若道账户额度计费')}
                       </div>
                     </div>
                   </div>
@@ -310,7 +350,7 @@ export function SettingsDialog() {
                   <div className="settings-grid">
                     <div className="field">
                       <label className="field-label" htmlFor="ai-base">
-                        API 地址
+                        {t('API 地址')}
                       </label>
                       <input
                         id="ai-base"
@@ -322,7 +362,7 @@ export function SettingsDialog() {
                     </div>
                     <div className="field">
                       <label className="field-label" htmlFor="ai-model">
-                        模型
+                        {t('模型')}
                       </label>
                       <input
                         id="ai-model"
@@ -344,29 +384,29 @@ export function SettingsDialog() {
                         type={showKey ? 'text' : 'password'}
                         value={draft.apiKey}
                         autoComplete="off"
-                        placeholder={draft.provider === 'ollama' ? '本地 Ollama 通常无需 Key' : 'sk-…'}
+                        placeholder={draft.provider === 'ollama' ? t('本地 Ollama 通常无需 Key') : 'sk-…'}
                         onChange={(event) => setDraft({ ...draft, apiKey: event.target.value })}
                       />
                       <button
                         type="button"
                         className="icon-btn icon-btn-sm affix-btn"
                         onClick={() => setShowKey((v) => !v)}
-                        aria-label={showKey ? '隐藏密钥' : '显示密钥'}
+                        aria-label={showKey ? t('隐藏密钥') : t('显示密钥')}
                       >
                         {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
                       </button>
                     </div>
-                    <span className="hint">密钥保存在本机浏览器存储中。若更在意安全，可只把 Ollama 暴露在本机。</span>
+                    <span className="hint">{t('密钥保存在本机浏览器存储中。若更在意安全，可只把 Ollama 暴露在本机。')}</span>
                   </div>
                 </>
               )}
               <div className="settings-actions">
                 <button type="button" className="btn btn-primary" onClick={saveAi}>
-                  保存配置
+                  {t('保存配置')}
                 </button>
                 <button type="button" className="btn btn-secondary" onClick={runTest} disabled={testing}>
                   {testing && <span className="spinner" />}
-                  测试连接
+                  {t('测试连接')}
                 </button>
                 {testResult && (
                   <span
@@ -383,12 +423,12 @@ export function SettingsDialog() {
             <section className="settings-section">
               <div className="settings-section-title">
                 <Database size={14} />
-                本地离线能力
+                {t('本地离线能力')}
               </div>
               <div className="setup-note">
                 <Info size={14} />
                 <span>
-                  即使没有配置任何模型，你仍然可以对当前文档、选区或笔记使用「离线摘要」和「关键词提取」：全部在本机计算，不发送任何内容。配置模型后，才启用对话、润色与续写。
+                  {t('即使没有配置任何模型，你仍然可以对当前文档、选区或笔记使用「离线摘要」和「关键词提取」：全部在本机计算，不发送任何内容。配置模型后，才启用对话、润色与续写。')}
                 </span>
               </div>
             </section>
@@ -396,10 +436,10 @@ export function SettingsDialog() {
             <section className="settings-section">
               <div className="settings-section-title">
                 <ShieldCheck size={14} />
-                隐私边界
+                {t('隐私边界')}
               </div>
               <p className="hint" style={{ margin: 0 }}>
-                对话内容只会发送到你填写的 API 地址；若使用 Ollama，数据留在本机。若服务商不允许浏览器直连（CORS），可改用本机 Ollama，或在桌面壳中通过本地代理访问。
+                {t('对话内容只会发送到你填写的 API 地址；若使用 Ollama，数据留在本机。若服务商不允许浏览器直连（CORS），可改用本机 Ollama，或在桌面壳中通过本地代理访问。')}
               </p>
             </section>
           </div>
@@ -410,44 +450,47 @@ export function SettingsDialog() {
             <section className="settings-section">
               <div className="settings-section-title">
                 <HardDrive size={14} />
-                本地存储概览
+                {t('本地存储概览')}
               </div>
               <div className="data-stat-grid">
                 <div className="data-stat">
                   <b>{stats.docs}</b>
-                  <span>文档</span>
+                  <span>{t('文档')}</span>
                 </div>
                 <div className="data-stat">
                   <b>{stats.sheets}</b>
-                  <span>表格</span>
+                  <span>{t('表格')}</span>
                 </div>
                 <div className="data-stat">
                   <b>{stats.notes}</b>
-                  <span>笔记</span>
+                  <span>{t('笔记')}</span>
                 </div>
               </div>
               <div className="status-line">
                 <span className="dot dot-green" />
-                IndexedDB 已连接 · 约 {sizeLabel} · 最后更新 {formatDateTime(Date.now())}
+                {t('IndexedDB 已连接 · 约 {size} · 最后更新 {time}', {
+                  size: sizeLabel,
+                  time: formatDateTime(Date.now()),
+                })}
               </div>
             </section>
 
             <section className="settings-section">
               <div className="settings-section-title">
                 <Download size={14} />
-                备份与迁移
+                {t('备份与迁移')}
               </div>
               <p className="hint" style={{ margin: 0 }}>
-                导出的 JSON 包含全部文档、表格与笔记，不包含 AI 密钥。换设备时导入即可恢复。
+                {t('导出的 JSON 包含全部文档、表格与笔记，不包含 AI 密钥。换设备时导入即可恢复。')}
               </p>
               <div className="settings-actions">
                 <button type="button" className="btn btn-secondary" onClick={doExport}>
                   <Download size={14} />
-                  导出完整备份
+                  {t('导出完整备份')}
                 </button>
                 <button type="button" className="btn btn-secondary" onClick={() => fileInputRef.current?.click()}>
                   <Upload size={14} />
-                  导入备份
+                  {t('导入备份')}
                 </button>
                 <input
                   ref={fileInputRef}
@@ -462,18 +505,18 @@ export function SettingsDialog() {
             <section className="settings-section">
               <div className="settings-section-title">
                 <Trash2 size={14} />
-                危险操作
+                {t('危险操作')}
               </div>
               <div className="danger-zone">
                 <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
-                    <div style={{ fontSize: 12.5, fontWeight: 600 }}>清空本地数据</div>
+                    <div style={{ fontSize: 12.5, fontWeight: 600 }}>{t('清空本地数据')}</div>
                     <div className="hint" style={{ marginTop: 3 }}>
-                      删除此设备上的全部文档、表格与笔记。该操作不可撤销，建议先导出备份。
+                      {t('删除此设备上的全部文档、表格与笔记。该操作不可撤销，建议先导出备份。')}
                     </div>
                   </div>
                   <button type="button" className="btn btn-danger-ghost btn-sm" onClick={() => setConfirmClear(true)}>
-                    清空
+                    {t('清空')}
                   </button>
                 </div>
               </div>
@@ -488,8 +531,8 @@ export function SettingsDialog() {
                 <Logo size={46} />
               </span>
               <div>
-                <div className="about-name">若道办公</div>
-                <div className="about-tag">RUODAO OFFICE · v0.1 · 本地优先版</div>
+                <div className="about-name">{t('若道办公')}</div>
+                <div className="about-tag">{t('RUODAO OFFICE · v0.1 · 本地优先版')}</div>
               </div>
             </div>
 
@@ -497,20 +540,20 @@ export function SettingsDialog() {
               <div className="opensource-panel">
                 <div className="opensource-panel-row">
                   <div>
-                    <h3>开源免费 · 全部功能开放</h3>
+                    <h3>{t('开源免费 · 全部功能开放')}</h3>
                     <p>
-                      若道办公以开源方式发布，不收取任何费用。没有订阅、授权码或按次导出收费，全部本地功能默认可用。
+                      {t('若道办公以开源方式发布，不收取任何费用。没有订阅、授权码或按次导出收费，全部本地功能默认可用。')}
                     </p>
                   </div>
                   <span className="badge badge-accent">FREE</span>
                 </div>
                 <div className="opensource-panel-features">
-                  <span>永久免费</span>
-                  <span>无订阅</span>
-                  <span>无广告 / 无水印</span>
-                  <span>离线 PDF / OCR</span>
-                  <span>自带 AI 模型</span>
-                  <span>整包备份</span>
+                  <span>{t('永久免费')}</span>
+                  <span>{t('无订阅')}</span>
+                  <span>{t('无广告 / 无水印')}</span>
+                  <span>{t('离线 PDF / OCR')}</span>
+                  <span>{t('自带 AI 模型')}</span>
+                  <span>{t('整包备份')}</span>
                 </div>
               </div>
             </section>
@@ -518,23 +561,20 @@ export function SettingsDialog() {
             <section className="settings-section">
               <div className="settings-section-title">
                 <Check size={14} />
-                这一版包含
+                {t('这一版包含')}
               </div>
               <p className="hint" style={{ margin: 0, lineHeight: 1.9 }}>
-                富文本文档与 DOCX 导入导出 · 带图表与 BI 看板的表格和 XLSX 互操作 · 离线 PDF 合并 / 拆分 /
-                水印 / 页码 / 签章 / 批注 / 压缩 / 转 Word / OCR · 图片 / PDF / 文档 / 表格 / ZIP 的本地批量转换 ·
-                支持反向链接的 Markdown 笔记 · 可接入 OpenAI 兼容服务或本地 Ollama 的 AI 助手。
+                {t('富文本文档与 DOCX 导入导出 · 带图表与 BI 看板的表格和 XLSX 互操作 · 离线 PDF 合并 / 拆分 / 水印 / 页码 / 签章 / 批注 / 压缩 / 转 Word / OCR · 图片 / PDF / 文档 / 表格 / ZIP 的本地批量转换 · 支持反向链接的 Markdown 笔记 · 可接入 OpenAI 兼容服务或本地 Ollama 的 AI 助手。')}
               </p>
             </section>
 
             <section className="settings-section">
               <div className="settings-section-title">
                 <Info size={14} />
-                技术说明
+                {t('技术说明')}
               </div>
               <p className="hint" style={{ margin: 0, lineHeight: 1.8 }}>
-                前端使用 React + TypeScript 构建；数据保存在 IndexedDB；PDF 处理使用 pdf-lib 与 PDF.js；OCR
-                使用 Tesseract.js。桌面安装壳使用 Electron，多设备实时协作通过自建服务完成。
+                {t('前端使用 React + TypeScript 构建；数据保存在 IndexedDB；PDF 处理使用 pdf-lib 与 PDF.js；OCR 使用 Tesseract.js。桌面安装壳使用 Electron，多设备实时协作通过自建服务完成。')}
               </p>
             </section>
           </div>
@@ -543,24 +583,24 @@ export function SettingsDialog() {
 
       <ConfirmDialog
         open={Boolean(pendingImport)}
-        title="导入并覆盖当前数据？"
-        description="当前设备上的文档、表格与笔记会被备份文件中的内容替换。建议先导出当前数据。"
-        confirmText="覆盖并导入"
+        title={t('导入并覆盖当前数据？')}
+        description={t('当前设备上的文档、表格与笔记会被备份文件中的内容替换。建议先导出当前数据。')}
+        confirmText={t('覆盖并导入')}
         danger={false}
         onClose={() => setPendingImport(null)}
         onConfirm={() => {
           if (!pendingImport) return
           replaceAll(pendingImport)
-          toast('备份已导入', 'success')
+          toast(t('备份已导入'), 'success')
           setPendingImport(null)
         }}
       />
 
       <ConfirmDialog
         open={confirmClear}
-        title="清空全部本地数据？"
-        description="此操作会永久删除当前设备上的所有文档、表格与笔记，且无法恢复。"
-        confirmText="确认清空"
+        title={t('清空全部本地数据？')}
+        description={t('此操作会永久删除当前设备上的所有文档、表格与笔记，且无法恢复。')}
+        confirmText={t('确认清空')}
         onClose={() => setConfirmClear(false)}
         onConfirm={() => {
           void doClear()

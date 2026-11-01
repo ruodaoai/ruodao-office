@@ -2,6 +2,7 @@ import type { CellAlign, CellData, CellStyle, NumberFormat, SheetTab } from '../
 import { clamp, estimateTextWidth, estimateWrappedLines, uid } from './utils'
 import { cellKey, refToPos } from './sheetRefs'
 import { SheetEvaluator, isFormulaError } from './formula'
+import { t } from '../i18n'
 
 export interface SheetBounds {
   rows: number
@@ -229,14 +230,14 @@ function applyWrapHeuristic(cells: Record<string, CellData>, colWidths: Record<n
 }
 
 export async function readSheetsFromFile(file: File): Promise<SheetTab[]> {
-  if (file.size > 30 * 1024 * 1024) throw new Error('文件不能超过 30MB')
+  if (file.size > 30 * 1024 * 1024) throw new Error(t('文件不能超过 30MB'))
   const XLSX = await import('xlsx')
   const buffer = await file.arrayBuffer()
   let workbook: import('xlsx').WorkBook
   try {
     workbook = XLSX.read(buffer, { type: 'array', cellDates: true, cellNF: true, cellStyles: true })
   } catch {
-    throw new Error('无法解析这个表格文件，请检查格式')
+    throw new Error(t('无法解析这个表格文件，请检查格式'))
   }
   const extras: XlsxExtras = /\.xls[xm]$/i.test(file.name)
     ? await readXlsxExtras(buffer)
@@ -330,7 +331,7 @@ export async function readSheetsFromFile(file: File): Promise<SheetTab[]> {
 
     return {
       id: uid(),
-      name: name.slice(0, 31) || '工作表',
+      name: name.slice(0, 31) || t('工作表'),
       cells,
       rows: Math.max(80, maxRow + 6),
       cols: Math.max(18, maxCol + 3),
@@ -340,7 +341,7 @@ export async function readSheetsFromFile(file: File): Promise<SheetTab[]> {
     }
   })
 
-  if (!tabs.length) throw new Error('这个文件里没有工作表')
+  if (!tabs.length) throw new Error(t('这个文件里没有工作表'))
   return tabs
 }
 
@@ -478,8 +479,8 @@ export async function workbookToXlsxBlob(tabs: SheetTab[]): Promise<Blob> {
       }))
     if (merges.length) worksheet['!merges'] = merges
 
-    let name = tab.name.replace(/[\\/?*[\]:]/g, ' ').trim().slice(0, 31) || `工作表${index + 1}`
-    if (names.has(name)) name = `工作表${index + 1}`
+    let name = tab.name.replace(/[\\/?*[\]:]/g, ' ').trim().slice(0, 31) || t('工作表 {n}', { n: index + 1 })
+    if (names.has(name)) name = t('工作表 {n}', { n: index + 1 })
     names.add(name)
     XLSX.utils.book_append_sheet(workbook, worksheet, name)
   })

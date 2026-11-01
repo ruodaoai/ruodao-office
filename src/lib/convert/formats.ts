@@ -1,3 +1,5 @@
+import { t } from '../../i18n'
+
 export type ConvertKind = 'image' | 'pdf' | 'text' | 'docx' | 'sheet' | 'json' | 'archive'
 
 export type TargetId =
@@ -98,7 +100,7 @@ export function fileExtension(name: string): string {
 export function fileBase(name: string): string {
   const index = name.lastIndexOf('.')
   const base = index > 0 ? name.slice(0, index) : name
-  return base.trim() || '未命名'
+  return base.trim() || t('未命名')
 }
 
 export function kindOf(name: string): ConvertKind | null {
